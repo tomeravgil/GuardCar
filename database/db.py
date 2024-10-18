@@ -17,7 +17,8 @@ class Database:
         self.directory = "../videos/"
     
     def create_video(self):
-        self.video = self.directory + str(date.today()) + str(Database.video_count)
+        video = self.directory + str(date.today()) + str(Database.video_count)
         video_count +=1
         Database.current_date = date.today()
+        return video
 
