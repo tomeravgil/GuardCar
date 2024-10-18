@@ -1,2 +1,3 @@
 /venv
 /vision/yolo*
+/network/.env
