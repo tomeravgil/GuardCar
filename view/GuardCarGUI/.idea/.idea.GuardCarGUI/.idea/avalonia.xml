@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AvaloniaProject">
+    <option name="projectPerEditor">
+      <map>
+        <entry key="GuardCarGUI/App.axaml" value="GuardCarGUI/GuardCarGUI.csproj" />
+        <entry key="GuardCarGUI/Icons.axaml" value="GuardCarGUI/GuardCarGUI.csproj" />
+        <entry key="GuardCarGUI/Views/CarouselView.axaml" value="GuardCarGUI/GuardCarGUI.csproj" />
+        <entry key="GuardCarGUI/Views/MainWindow.axaml" value="GuardCarGUI/GuardCarGUI.csproj" />
+        <entry key="GuardCarGUI/Views/SecurityWidget.axaml" value="GuardCarGUI/GuardCarGUI.csproj" />
+        <entry key="GuardCarGUI/Views/Weather.axaml" value="GuardCarGUI/GuardCarGUI.csproj" />
+      </map>
+    </option>
+  </component>
+</project>

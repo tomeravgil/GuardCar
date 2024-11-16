@@ -1,0 +1,36 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:"
+             x:Class="GuardCarGUI.Views.SecurityWidget"
+             x:DataType="vm:SecurityAlertsViewModel"
+             Width="200"
+             Height="200">
+    <Border Background="#2D2D2D" CornerRadius="12" Padding="10">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock Text="Security Alerts" FontSize="16" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+            
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,10">
+                <!-- Alerts Button -->
+                <Button Background="#B983FF" Width="60" Height="80" CornerRadius="8" Margin="5"
+                        Command="{Binding NavigateToAlertsCommand}">
+                    <StackPanel>
+                        <TextBlock Text="2" FontSize="24" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+                        <TextBlock Text="Alerts" FontSize="12" Foreground="White" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                
+                <!-- Warnings Button -->
+                <Button Background="#6DF2A2" Width="60" Height="80" CornerRadius="8" Margin="5"
+                        Command="{Binding NavigateToWarningsCommand}">
+                    <StackPanel>
+                        <TextBlock Text="3" FontSize="24" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+                        <TextBlock Text="Warnings" FontSize="12" Foreground="White" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <!-- Description -->
+            <TextBlock Text="→ Unusual activity detected" FontSize="12" Foreground="#A5A5A5" HorizontalAlignment="Center" />
+        </StackPanel>
+    </Border>
+</UserControl>

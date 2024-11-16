@@ -1,0 +1,36 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:GuardCarGUI.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:GuardCarGUI.Views"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="GuardCarGUI.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="GuardCarGUI">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <!-- Use a Grid with two rows to display Weather and Security widgets in a vertical grid layout -->
+    <Grid RowDefinitions="50*,50*" ColumnDefinitions="75*,25*" Margin="50">
+        <!-- Weather Widget in the top row -->
+        <Border Grid.Row="0" Grid.Column="0" Grid.RowSpan="2" CornerRadius="15" Background="#2D2D2D" Margin="22.5">
+            <!-- Optional content inside the box -->
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="Box Content" Foreground="White" FontSize="16" HorizontalAlignment="Center" />
+            </StackPanel>
+        </Border>
+        <Viewbox Grid.Row="0" Grid.Column="1" Stretch="Uniform" Margin="19">
+            <views:Weather/>
+        </Viewbox>
+
+        <!-- Security Widget in the bottom row -->
+        <Viewbox Grid.Row="1" Grid.Column="1" Stretch="Uniform" Margin="20">
+            <views:SecurityWidget/>
+        </Viewbox>
+    </Grid>
+
+</Window>

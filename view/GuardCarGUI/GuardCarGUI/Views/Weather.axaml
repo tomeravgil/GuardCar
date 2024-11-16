@@ -1,0 +1,89 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:"
+             x:Class="GuardCarGUI.Views.Weather"
+             x:DataType="vm:WeatherViewModel"
+             Width="200">
+    <UserControl.Styles>
+        <!-- Dynamic Background based on time of day -->
+        <Style Selector="Border#WeatherCard">
+            <Setter Property="Background" Value="{Binding BackgroundColor}"/>
+            <Setter Property="CornerRadius" Value="15"/>
+            <Setter Property="Padding" Value="20"/>
+        </Style>
+
+        <!-- Style for small labels like "Place" and "Feels like" -->
+        <Style Selector="TextBlock.Label">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#B0BEC5"/>
+        </Style>
+
+        <!-- Style for the main temperature display -->
+        <Style Selector="TextBlock.Temperature">
+            <Setter Property="FontSize" Value="48"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+
+        <!-- Style for icons and other smaller texts at the bottom -->
+        <Style Selector="TextBlock.SubText">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#CFD8DC"/>
+        </Style>
+    </UserControl.Styles>
+
+    <!-- Main Weather Card with Gradient Background -->
+    <Border x:Name="WeatherCard" BorderBrush="#607D8B" BorderThickness="1" CornerRadius="15">
+        <StackPanel Spacing="10">
+            <!-- Location and Weather Icon -->
+            <TextBlock Classes="Label" Text="{Binding Place}"/>
+
+            <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                <!-- Weather Icon Placeholder -->
+                <Path x:Name="WeatherPath"
+                      Data="{StaticResource weather_cloudy_regular}" 
+                      Stroke="White"
+                      StrokeThickness="1"
+                      Width="50" 
+                      Height="50"/>
+                
+                <!-- Main Temperature -->
+                <TextBlock Classes="Temperature">
+                    <TextBlock.Inlines>
+                        <Run Text="20"/>
+                        <Run Text="°"/>
+                    </TextBlock.Inlines>
+                </TextBlock>
+            </StackPanel>
+            
+            <!-- Min/Max Temperature Display -->
+            <Border Background="#1E2433" CornerRadius="10" Padding="10" Margin="0,10,0,0">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
+                    <!-- High Temperature -->
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                        <Path Data="{StaticResource arrow_up_circle_regular}" Fill="#e0a292"/> 
+                        <TextBlock Classes="SubText" FontSize="20">
+                            <TextBlock.Inlines>
+                                <Run Text="20"/>
+                                <Run Text="°"/>
+                            </TextBlock.Inlines>
+                        </TextBlock>
+                    </StackPanel>
+                    
+                    <TextBlock Classes="SubText" Text="|" FontSize="20"/>
+                    
+                    <!-- Low Temperature -->
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                        <Path Data="{StaticResource arrow_down_circle_regular}" Fill="#92d0e0"/> 
+                        <TextBlock Classes="SubText" FontSize="20">
+                            <TextBlock.Inlines >
+                                <Run Text="20"/>
+                                <Run Text="°"/>
+                            </TextBlock.Inlines>
+                        </TextBlock>                    
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Border>
+</UserControl>
