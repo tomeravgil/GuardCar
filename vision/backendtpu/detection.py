@@ -134,14 +134,13 @@ def detect(model="ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite",
 def main():
     images = ["bicycle.jpeg", "car.jpeg", "motorcycle.jpg", "truck.jpeg", "backpack.jpeg", 
                 "baseball.jpg", "knife.jpg"]
-    # Set up test inputs
+
     for i in range(len(images)):
         model = "ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite"
         label = "coco_labels.txt"
-        image = "/tests/{images[i]}"
-        output = "output_image{i}.jpg"
+        image = f"/tests/{images[i]}"
+        output = f"output_image{i}.jpg"
 
-        # Call the detect function
         detected_danger = detect(
             model=model,
             label=label,
@@ -150,7 +149,6 @@ def main():
             output=output
         )
 
-        # Print the results
         print("Detected danger items:")
         for item, count in detected_danger.items():
             print(f"{item}: {count}")
