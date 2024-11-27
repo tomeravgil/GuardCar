@@ -1,65 +1,51 @@
-# from edgetpu.detection.engine import DetectionEngine
-# from edgetpu.utils import dataset_utils
-# from PIL import Image
-# from PIL import ImageDraw
-
-# def detect(model="ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite",
-#            label="coco_labels.txt",
-#            image="",
-#            debug="True",
-#            output=""):
-    
-#     #error checking for image
-#     if image == "":
-#         print("No image sent")
-#         return
-    
-#     #initialize engine
-
-#     engine = DetectionEngine(model)
-#     labels = dataset_utils.read_label_file(label)
-
-#     img = Image.open(image).convert('RGB')
-
-
-#     objs = engine.detect_with_image(img,
-#                                     threshold=0.5,
-#                                     relative_coord=False,
-#                                     top_k=5)
-
-#     if not debug:
-#         danger_list = ["person","bicycle","car","motorcycle","truck","backpack","baseball bat","bottle","knife", "fork", "chair"]
-#         detected_danger = dict()
-#         for obj in objs:
-#             obj_label = labels[obj.label_id]
-#             if obj_label in danger_list:
-#                 detected_danger[obj_label] += 1
-#         return detected_danger
-    
-
-#     draw = ImageDraw.Draw(img)
-#     danger_list = ["person","bicycle","car","motorcycle","truck","backpack","baseball bat","bottle","knife", "fork", "chair"]
-#     detected_danger = dict()
-#     for obj in objs:
-#         obj_label = labels[obj.label_id]
-#         if obj_label in danger_list:
-#             detected_danger[obj_label] += 1
-#             box = obj.bounding_box.flatten().tolist()
-#             draw.rectangle(box,outline="red")
-    
-#     try:
-#         image.save(output)
-#     except IOError:
-#         print("cannot save to output location")
-
-#     return detected_danger
-
-                
 from pycoral.adapters.detect import get_objects
 from pycoral.utils.edgetpu import make_interpreter
 from pycoral.utils.dataset import read_label_file
 from PIL import Image, ImageDraw
 from collections import defaultdict
+import numpy as np
+
+def non_max_suppression(objects, iou_threshold=0.4):
+    if len(objects) == 0:
+        return []
+
+    # Extract bounding boxes and scores
+    boxes = np.array([[obj.bbox.xmin, obj.bbox.ymin, obj.bbox.xmax, obj.bbox.ymax] for obj in objects])
+    scores = np.array([obj.score for obj in objects])
+
+    # Compute the area of each bounding box
+    areas = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
+
+    # Sort by confidence score
+    order = scores.argsort()[::-1]
+
+    keep = []
+    while order.size > 0:
+        i = order[0]
+        keep.append(objects[i])
+        order = order[1:]
+
+        # Compute IoU (Intersection over Union)
+        overlaps = []
+        for j in order:
+            xx1 = max(boxes[i, 0], boxes[j, 0])
+            yy1 = max(boxes[i, 1], boxes[j, 1])
+            xx2 = min(boxes[i, 2], boxes[j, 2])
+            yy2 = min(boxes[i, 3], boxes[j, 3])
+
+            w = max(0, xx2 - xx1)
+            h = max(0, yy2 - yy1)
+
+            intersection = w * h
+            union = areas[i] + areas[j] - intersection
+            overlaps.append(intersection / union)
+
+        # Suppress boxes with IoU above the threshold
+        overlaps = np.array(overlaps)
+        order = order[overlaps <= iou_threshold]
+
+    return keep
+
 
 def detect(model="ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite",
            label="coco_labels.txt",
@@ -78,6 +64,7 @@ def detect(model="ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite",
 
     # Load the image
     img = Image.open(image).convert('RGB')
+    original_width, original_height = img.width, img.height
 
     # Get input details
     input_details = interpreter.get_input_details()
@@ -85,32 +72,53 @@ def detect(model="ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite",
 
     # Preprocess the image
     resized_img = img.resize((width, height))
-    input_tensor = interpreter.tensor(input_details[0]['index'])()[0]
-    input_tensor[:, :] = resized_img
+    input_data = np.asarray(resized_img, dtype=np.uint8)
 
+    # Copy data to the tensor
+    input_index = input_details[0]['index']
+    np.copyto(interpreter.tensor(input_index)(), input_data)
 
     # Run inference
     interpreter.invoke()
-    objs = get_objects(interpreter, threshold=0.5)
+
+    # Get detected objects
+    objs = get_objects(interpreter, 0.5)
+    threshold = 0.5
+    filtered_objs = [obj for obj in objs if obj.score >= threshold]
+
+    # Apply Non-Maximum Suppression
+    filtered_objs = non_max_suppression(filtered_objs, iou_threshold=0.5)
 
     danger_list = ["person", "bicycle", "car", "motorcycle", "truck", "backpack", 
-                   "baseball bat", "bottle", "knife", "fork", "chair"]
+                   "baseball bat", "knife"]
     detected_danger = defaultdict(int)
 
     if not debug:
-        for obj in objs:
+        for obj in filtered_objs:
             obj_label = labels.get(obj.id, obj.id)
             if obj_label in danger_list:
                 detected_danger[obj_label] += 1
         return dict(detected_danger)
 
+    # Draw bounding boxes in debug mode
     draw = ImageDraw.Draw(img)
-    for obj in objs:
+    scale_x = original_width / width
+    scale_y = original_height / height
+
+    for obj in filtered_objs:
         obj_label = labels.get(obj.id, obj.id)
         if obj_label in danger_list:
             detected_danger[obj_label] += 1
+
+            # Scale bounding box to original image dimensions
             bbox = obj.bbox
-            draw.rectangle([(bbox.xmin, bbox.ymin), (bbox.xmax, bbox.ymax)], outline="red")
+            xmin = int(bbox.xmin * scale_x)
+            ymin = int(bbox.ymin * scale_y)
+            xmax = int(bbox.xmax * scale_x)
+            ymax = int(bbox.ymax * scale_y)
+
+            # Draw the box
+            draw.rectangle([(xmin, ymin), (xmax, ymax)], outline="red")
 
     if output:
         try:
@@ -120,7 +128,9 @@ def detect(model="ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite",
     
     return dict(detected_danger)
 
-        
+
+
+
 def main():
     # Set up test inputs
     model = "ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite"
