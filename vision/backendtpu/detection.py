@@ -78,12 +78,16 @@ def detect(model="ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite",
 
     # Load the image
     img = Image.open(image).convert('RGB')
-    _, scale = interpreter.input_details[0]['shape'][1:3], interpreter.input_details[0]['shape'][2]
+
+    # Get input details
+    input_details = interpreter.get_input_details()
+    height, width = input_details[0]['shape'][1:3]
 
     # Preprocess the image
-    resized_img = img.resize((scale, scale))
-    input_tensor = input_tensor(interpreter)
+    resized_img = img.resize((width, height))
+    input_tensor = interpreter.tensor(input_details[0]['index'])()[0]
     input_tensor[:, :] = resized_img
+
 
     # Run inference
     interpreter.invoke()
