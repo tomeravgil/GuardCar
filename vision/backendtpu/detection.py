@@ -132,27 +132,30 @@ def detect(model="ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite",
 
 
 def main():
+    images = ["bicycle.jpeg", "car.jpeg", "motorcycle.jpg", "truck.jpeg", "backpack.jpeg", 
+                "baseball.jpg", "knife.jpg"]
     # Set up test inputs
-    model = "ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite"
-    label = "coco_labels.txt"
-    image = "person.jpg"  # Replace with the path to your test image
-    output = "output_image.jpg"
+    for i in range(len(images)):
+        model = "ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite"
+        label = "coco_labels.txt"
+        image = "/tests/{images[i]}"
+        output = "output_image{i}.jpg"
 
-    # Call the detect function
-    detected_danger = detect(
-        model=model,
-        label=label,
-        image=image,
-        debug=True,
-        output=output
-    )
+        # Call the detect function
+        detected_danger = detect(
+            model=model,
+            label=label,
+            image=image,
+            debug=True,
+            output=output
+        )
 
-    # Print the results
-    print("Detected danger items:")
-    for item, count in detected_danger.items():
-        print(f"{item}: {count}")
+        # Print the results
+        print("Detected danger items:")
+        for item, count in detected_danger.items():
+            print(f"{item}: {count}")
 
-    print(f"Output image saved as: {output}")
+        print(f"Output image saved as: {output}")
 
 
 if __name__ == "__main__":
