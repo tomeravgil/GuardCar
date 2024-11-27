@@ -17,7 +17,7 @@ class Detection:
         self.interpreter.allocate_tensors()
         self.labels = read_label_file(label)
 
-    def non_max_suppression(objects, iou_threshold=0.4):
+    def non_max_suppression(self,objects, iou_threshold=0.4):
         if len(objects) == 0:
             return []
 
