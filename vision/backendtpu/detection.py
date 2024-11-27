@@ -121,7 +121,7 @@ def main():
     # Set up test inputs
     model = "ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite"
     label = "coco_labels.txt"
-    image = "test_image.jpg"  # Replace with the path to your test image
+    image = "person.jpg"  # Replace with the path to your test image
     output = "output_image.jpg"
 
     # Call the detect function
