@@ -15,7 +15,7 @@ class Detection:
     """
 
     def __init__(self, 
-                 model="yolov8s_full_integer_quant_edgetpu_192.tflite",
+                 model="ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite",
                  label="coco_labels.txt", 
                  debug=False):
         
@@ -33,8 +33,6 @@ class Detection:
         # Load the model and labels
         self.interpreter = make_interpreter(model)
         self.interpreter.allocate_tensors()
-        output_details = self.interpreter.get_output_details()
-        print("Output details:", output_details)
         self.labels = read_label_file(label)
 
     def non_max_suppression(self, objects, iou_threshold=0.4):
