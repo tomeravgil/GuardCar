@@ -1,15 +1,16 @@
+import socket
+import io
+from PIL import Image
 from pycoral.adapters.detect import get_objects
 from pycoral.utils.edgetpu import make_interpreter
 from pycoral.utils.dataset import read_label_file
-from PIL import Image, ImageDraw
 from collections import defaultdict
 import numpy as np
 
-class Detection:
 
-    def __init__(self,model="ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite",
-                 label="coco_labels.txt",
-                 debug=False):
+class Detection:
+    def __init__(self, model="ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite",
+                 label="coco_labels.txt", debug=False):
         self.debug = debug
 
         # Load the model and labels
@@ -17,7 +18,7 @@ class Detection:
         self.interpreter.allocate_tensors()
         self.labels = read_label_file(label)
 
-    def non_max_suppression(self,objects, iou_threshold=0.4):
+    def non_max_suppression(self, objects, iou_threshold=0.4):
         if len(objects) == 0:
             return []
 
@@ -54,17 +55,9 @@ class Detection:
 
         return keep
 
-
-    def detect( self,
-                image="",
-                output=""):
-
-        if not image:
-            print("No image provided.")
-            return
-
-        # Load and preprocess the image
-        img = Image.open(image).convert('RGB')
+    def detect_from_image(self, img):
+        # Preprocess the image
+        img = img.convert('RGB')
         original_width, original_height = img.width, img.height
 
         input_details = self.interpreter.get_input_details()
@@ -91,69 +84,47 @@ class Detection:
 
         # Detect dangers
         danger_list = ["person", "bicycle", "car", "motorcycle", "truck", "backpack",
-                    "baseball bat", "knife"]
+                       "baseball bat", "knife"]
         detected_danger = defaultdict(int)
 
-        # Cache labels
-        label_cache = {obj.id: self.labels.get(obj.id, obj.id) for obj in filtered_objs}
-
-        # Debug mode: Draw bounding boxes
-        if self.debug:
-            draw = ImageDraw.Draw(img)
-            for obj in filtered_objs:
-                obj_label = label_cache[obj.id]
-                if obj_label in danger_list:
-                    detected_danger[obj_label] += 1
-
-                    # Scale bounding box
-                    bbox = obj.bbox
-                    xmin = int(bbox.xmin * scale_x)
-                    ymin = int(bbox.ymin * scale_y)
-                    xmax = int(bbox.xmax * scale_x)
-                    ymax = int(bbox.ymax * scale_y)
-
-                    # Draw the box
-                    draw.rectangle([(xmin, ymin), (xmax, ymax)], outline="red")
-
-        else:
-            for obj in filtered_objs:
-                obj_label = label_cache[obj.id]
-                if obj_label in danger_list:
-                    detected_danger[obj_label] += 1
-
-        if output and self.debug:
-            self.save_output_image(img, output)
+        for obj in filtered_objs:
+            obj_label = self.labels.get(obj.id, obj.id)
+            if obj_label in danger_list:
+                detected_danger[obj_label] += 1
 
         return dict(detected_danger)
 
 
-    def save_output_image(self, img, output):
-        try:
-            img.save(output)
-        except IOError:
-            print("Cannot save to output location.")
+def start_server(host="0.0.0.0", port=5000):
+    detection_model = Detection(debug=False)
 
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
+        server.bind((host, port))
+        server.listen(1)
+        print(f"Server listening on {host}:{port}")
 
+        while True:
+            conn, addr = server.accept()
+            print(f"Connected by {addr}")
+            with conn:
+                # Receive the image data
+                data = b""
+                while True:
+                    packet = conn.recv(4096)
+                    if not packet:
+                        break
+                    data += packet
 
-def main():
-    images = ["bicycle.jpeg", "car.jpeg", "motorcycle.jpg", "truck.jpeg", "backpack.jpeg", 
-                "baseball.jpg", "knife.jpg"]
-    detection_model = Detection(debug=True)
-    for i in range(len(images)):
-        image = f"tests/{images[i]}"
-        output = f"output_image{i}.jpg"
+                # Convert bytes to an image
+                img = Image.open(io.BytesIO(data))
 
-        detected_danger = detection_model.detect(
-                                                    image=image,
-                                                    output=output
-                                                )
+                # Perform detection
+                detected_danger = detection_model.detect_from_image(img)
 
-        print("Detected danger items:")
-        for item, count in detected_danger.items():
-            print(f"{item}: {count}")
-
-        print(f"Output image saved as: {output}")
+                # Send results back to the client
+                response = str(detected_danger).encode('utf-8')
+                conn.sendall(response)
 
 
 if __name__ == "__main__":
-    main()
+    start_server()
