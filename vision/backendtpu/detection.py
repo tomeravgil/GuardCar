@@ -115,15 +115,18 @@ def start_server(host="0.0.0.0", port=5000):
                         break
                     data += packet
 
-                # Convert bytes to an image
-                img = Image.open(io.BytesIO(data))
+                try:
+                    # Convert bytes to an image
+                    img = Image.open(io.BytesIO(data))
 
-                # Perform detection
-                detected_danger = detection_model.detect_from_image(img)
+                    # Perform detection
+                    detected_danger = detection_model.detect_from_image(img)
 
-                # Send results back to the client
-                response = str(detected_danger).encode('utf-8')
-                conn.sendall(response)
+                    # Send results back to the client
+                    response = str(detected_danger).encode('utf-8')
+                    conn.sendall(response)
+                except Exception as e:
+                    print(f"Error processing image: {e}")
 
 
 if __name__ == "__main__":
