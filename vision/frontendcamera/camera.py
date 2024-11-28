@@ -68,7 +68,7 @@ def capture_and_display():
 
             # Overlay the server response as text on the frame
             with response_lock:
-                overlay_text = f"Server Response: {server_response}"
+                overlay_text = f"Server Response: {server_response} FPS: {camera.frame_rate}"
             cv2.putText(frame, overlay_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
             # Display the video frame
