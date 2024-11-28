@@ -84,8 +84,9 @@ def send_frame_to_server(frame):
     """
     global server_response
     try:
-        # Convert the frame to bytes
-        frame_data = frame.tobytes()
+        # Encode the frame as a JPEG image
+        _, frame_encoded = cv2.imencode('.jpg', frame)
+        frame_data = frame_encoded.tobytes()
         frame_size = len(frame_data)
 
         # Open a socket connection
@@ -125,16 +126,13 @@ def capture_and_display():
             # Start a thread to send the frame to the server
             threading.Thread(target=send_frame_to_server, args=(frame,), daemon=True).start()
 
-            # Convert the frame to BGR format for OpenCV (if needed)
-            frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-
             # Overlay the server response as text on the frame
             with response_lock:
                 overlay_text = f"Server Response: {server_response}"
-            cv2.putText(frame_bgr, overlay_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            cv2.putText(frame, overlay_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
             # Display the video frame
-            cv2.imshow("Video Stream", frame_bgr)
+            cv2.imshow("Video Stream", frame)
 
             # Break the loop if 'q' is pressed
             if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -151,3 +149,4 @@ def capture_and_display():
 
 if __name__ == "__main__":
     capture_and_display()
+

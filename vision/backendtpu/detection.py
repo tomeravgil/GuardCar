@@ -276,7 +276,7 @@ class Detection:
 
 def process_image(image_data):
     """
-    Converts raw image data into a resized grayscale image.
+    Converts raw JPEG image data into a PIL Image.
     """
     try:
         img = Image.open(io.BytesIO(image_data))
@@ -287,11 +287,7 @@ def process_image(image_data):
         print(f"Error processing image: {e}")
         return None
 
-
 def start_server(host="0.0.0.0", port=5000):
-    """
-    Starts a socket server to receive images, perform detection, and respond with results.
-    """
     model_detection = Detection()
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
@@ -306,10 +302,8 @@ def start_server(host="0.0.0.0", port=5000):
                 try:
                     size_data = conn.recv(4)
                     if not size_data:
-                        print("No size data received")
                         continue
                     size = struct.unpack(">I", size_data)[0]
-                    print(f"Expecting {size} bytes of image data")
                     data = b""
                     while len(data) < size:
                         packet = conn.recv(4096)
@@ -317,21 +311,15 @@ def start_server(host="0.0.0.0", port=5000):
                             break
                         data += packet
                     if len(data) == size:
-                        print(f"Received {len(data)} bytes of image data")
-                        processed_img = process_image(data)
-                        if processed_img:
-                            detected_danger = model_detection.detect_from_image(processed_img)
-                            print(f"Detected dangers: {detected_danger}")
-                            response = str(detected_danger).encode('utf-8')
+                        img = process_image(data)
+                        if img:
+                            objs = model_detection.detect_from_image(img)
+                            response = str(len(objs)).encode('utf-8')
                         else:
-                            response = "Failed to process image".encode('utf-8')
+                            response = b"Failed to process image"
                         conn.sendall(response)
-                        print("Response sent to the client")
-                    else:
-                        print(f"Incomplete data received. Expected {size} bytes, got {len(data)} bytes.")
                 except Exception as e:
                     print(f"Error: {e}")
-
 
 if __name__ == "__main__":
     start_server()
