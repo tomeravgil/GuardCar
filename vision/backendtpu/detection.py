@@ -6,6 +6,7 @@ from pycoral.utils.edgetpu import make_interpreter
 from pycoral.utils.dataset import read_label_file
 from collections import defaultdict
 import numpy as np
+from struct import unpack
 
 
 class Detection:
@@ -96,8 +97,7 @@ class Detection:
 
 
 def start_server(host="0.0.0.0", port=5000):
-    detection_model = Detection(debug=False)
-
+    model_detection = Detection()
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
         server.bind((host, port))
         server.listen(1)
@@ -107,26 +107,43 @@ def start_server(host="0.0.0.0", port=5000):
             conn, addr = server.accept()
             print(f"Connected by {addr}")
             with conn:
-                # Receive the image data
-                data = b""
-                while True:
-                    packet = conn.recv(4096)
-                    if not packet:
-                        break
-                    data += packet
-
                 try:
-                    # Convert bytes to an image
-                    img = Image.open(io.BytesIO(data))
+                    # Receive the size of the image data
+                    size_data = conn.recv(4)  # First 4 bytes indicate size
+                    if not size_data:
+                        print("No size data received")
+                        continue
+                    size = unpack(">I", size_data)[0]
+                    print(f"Expecting {size} bytes of image data")
 
-                    # Perform detection
-                    detected_danger = detection_model.detect_from_image(img)
+                    # Receive the actual image data
+                    data = b""
+                    while len(data) < size:
+                        packet = conn.recv(4096)
+                        if not packet:
+                            break
+                        data += packet
 
-                    # Send results back to the client
-                    response = str(detected_danger).encode('utf-8')
-                    conn.sendall(response)
+                    if len(data) == size:
+                        print(f"Received {len(data)} bytes of image data")
+
+                        # Convert bytes to an image
+                        img = Image.open(io.BytesIO(data))
+                        print("Image successfully loaded")
+
+                        # Placeholder: Process the image (detection)
+                        detected_danger = model_detection.detect_from_image(img)
+                        print(f"Detected dangers: {detected_danger}")
+
+                        # Send results back to the client
+                        response = str(detected_danger).encode('utf-8')
+                        conn.sendall(response)
+                        print("Results sent back to the client")
+                    else:
+                        print(f"Incomplete data received. Expected {size} bytes, got {len(data)} bytes.")
+
                 except Exception as e:
-                    print(f"Error processing image: {e}")
+                    print(f"Error: {e}")
 
 
 if __name__ == "__main__":
