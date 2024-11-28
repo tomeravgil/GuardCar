@@ -4,6 +4,7 @@ import threading
 import struct
 import numpy as np
 from picamera2 import Picamera2
+import time
 
 # Server details
 HOST = "0.0.0.0"  # Update with server's IP if not local
@@ -57,18 +58,24 @@ def capture_and_display():
     camera = Picamera2()
     camera.configure(camera.create_video_configuration(main={"size": (640, 480)}))
     camera.start()
+    prev_time = time.time()  # Time of the last frame capture
+
 
     try:
         while True:
             # Capture the current frame
             frame = camera.capture_array()
 
+            current_time = time.time()
+            fps = 1 / (current_time - prev_time)
+            prev_time = current_time
+
             # Start a thread to send the frame to the server
             threading.Thread(target=send_frame_to_server, args=(frame,), daemon=True).start()
 
             # Overlay the server response as text on the frame
             with response_lock:
-                overlay_text = f"Server Response: {server_response} FPS: {camera.frame_rate}"
+                overlay_text = f"Server Response: {server_response} FPS: {fps:.2f}"
             cv2.putText(frame, overlay_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
             # Display the video frame
