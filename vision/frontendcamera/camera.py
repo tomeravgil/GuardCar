@@ -114,7 +114,7 @@ def capture_and_display():
 
     # Initialize the PiCamera2
     camera = Picamera2()
-    camera.configure(camera.create_still_configuration())
+    camera.configure(camera.create_video_configuration(main={"size": (640, 480)}))
     camera.start()
 
     try:
