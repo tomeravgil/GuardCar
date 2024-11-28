@@ -314,6 +314,7 @@ def start_server(host="0.0.0.0", port=5000):
                         img = process_image(data)
                         if img:
                             objs = model_detection.detect_from_image(img)
+                            print(f"objs {objs}")
                             response = str(len(objs)).encode('utf-8')
                         else:
                             response = b"Failed to process image"
