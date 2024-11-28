@@ -10,8 +10,24 @@ from struct import unpack
 
 
 class Detection:
-    def __init__(self, model="ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite",
-                 label="coco_labels.txt", debug=False):
+    """
+    Handles object detection using a TensorFlow Lite model on EdgeTPU.
+    """
+
+    def __init__(self, 
+                 model="ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite",
+                 label="coco_labels.txt", 
+                 debug=False):
+        
+        """
+        Initializes the detection model and loads labels.
+
+        Parameters:
+        - model (str): Path to the TensorFlow Lite model file.
+        - label (str): Path to the labels file.
+        - debug (bool): Enables debug logging if True.
+        """
+
         self.debug = debug
 
         # Load the model and labels
@@ -20,6 +36,17 @@ class Detection:
         self.labels = read_label_file(label)
 
     def non_max_suppression(self, objects, iou_threshold=0.4):
+        """
+        Applies Non-Maximum Suppression (NMS) to remove overlapping bounding boxes.
+
+        Parameters:
+        - objects (list): Detected objects as a list of bounding boxes and scores.
+        - iou_threshold (float): Intersection over Union (IoU) threshold for filtering.
+
+        Returns:
+        - list: Filtered list of detected objects after NMS.
+        """
+
         if len(objects) == 0:
             return []
 
@@ -57,6 +84,16 @@ class Detection:
         return keep
 
     def detect_from_image(self, img):
+        """
+        Detects objects from an image.
+
+        Parameters:
+        - img (PIL.Image): The input image to process.
+
+        Returns:
+        - dict: A dictionary of detected objects and their counts.
+        """
+
         # Preprocess the image
         img = img.convert('RGB')
         original_width, original_height = img.width, img.height
@@ -96,7 +133,16 @@ class Detection:
         return dict(detected_danger)
 
 
-def start_server(host="0.0.0.0", port=5000):
+def start_server(host="0.0.0.0", 
+                 port=5000):
+    """
+    Starts a socket server to receive images, perform detection, and respond with results.
+
+    Parameters:
+    - host (str): Host address to bind the server.
+    - port (int): Port to bind the server.
+    """
+
     model_detection = Detection()
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
         server.bind((host, port))
