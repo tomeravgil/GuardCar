@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import cv2
 import random
 from ultralytics import YOLO
@@ -9,7 +10,7 @@ def getColours(cls_num):
     return tuple(random.randint(0, 255) for _ in range(3))
 
 
-class DetectionService:
+class DetectionService(ABC):
     def __init__(self, model_path: str, streaming_file_path: str = None):
         self.model = self.load_model(model_path)
         self.streaming_urls = []
@@ -36,7 +37,13 @@ class DetectionService:
         
     def detect_and_display(self):
         """Perform object detection on an image and display the results."""
-        
+
         for source_file in self.streaming_urls:
             for result in self.model(source_file, stream=True):
-                pass
+                self.handle_result(result)
+
+
+    @abstractmethod
+    def handle_result(self, result):
+        """Abstract method to handle each detection result."""
+        pass
