@@ -1,0 +1,25 @@
+# Python virtual environment
+venv/
+
+# Byte-compiled / cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Distribution / build folders
+build/
+dist/
+*.egg-info/
+
+# IDE / editor settings
+.vscode/
+.idea/
+*.swp
+
+# TLS private key (keep out of Git!)
+VideoContainer/key.pem
+
+# OS files
+.DS_Store
+Thumbs.db
