@@ -1,4 +1,5 @@
 import cv2
+from picamera2 import Picamera2
 import socket
 import ssl
 import time
@@ -6,16 +7,17 @@ import struct
 import numpy as np
 
 # Configuration
-CAM0 = 0    #/dev/video0
-CAM1 = 1    #/dev/video1
 SERVER_HOST = "192.168.1.181"
 SERVER_PORT = 8443
 CERT_FILE = "cert.pem"
 FPS = 30
 
-# OPENCV Video Capture
-cap0 = cv2.VideoCapture(CAM0)
-cap1 = cv2.VideoCapture(CAM1)
+# Initialize cameras
+cam0 = Picamera2()
+cam1 = Picamera2()
+
+cam0.start()
+cam1.start()
 
 # Set up TLS socket
 context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=CERT_FILE)
@@ -23,16 +25,15 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 conn = context.wrap_socket(sock, server_hostname=SERVER_HOST)
 conn.connect((SERVER_HOST, SERVER_PORT))
 
+
+
 print("Connected to receiver")
 
 try:
     prev = time.time()
     while True:
-        ret0, frame0 = cap0.read()
-        ret1, frame1 = cap1.read()
-        if not ret0 or not ret1:
-            print("Failed to capture frames")
-            break
+        frame0 = cam0.capture_array()
+        frame1 = cam1.capture_array()
 
         # Resize frames to the same height(in case of different camera resolutions)
         height = min(frame0.shape[0], frame1.shape[0])
@@ -58,8 +59,7 @@ try:
         prev = time.time()
 except KeyboardInterrupt:
     print("Exiting sender")
-
 finally:
-    cap0.release()
-    cap1.release()
+    cam0.stop()
+    cam1.stop()
     conn.close()
