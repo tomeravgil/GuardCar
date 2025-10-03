@@ -35,11 +35,11 @@ class DetectionService(ABC):
         except Exception as e:
             print(f"Error loading streaming URLs: {e}")
         
-    def detect_and_display(self):
+    def detect_and_process(self):
         """Perform object detection on an image and display the results."""
 
         for source_file in self.streaming_urls:
-            for result in self.model(source_file, stream=True):
+            for result in self.model.track(source_file, stream=True, tracker=self.tracker):
                 self.handle_result(result)
 
 
@@ -47,3 +47,7 @@ class DetectionService(ABC):
     def handle_result(self, result):
         """Abstract method to handle each detection result."""
         pass
+
+class TrackingDetectionService(DetectionService):
+    def handle_result(self, result):
+        """Handle the detection result for an image."""
