@@ -1,0 +1,31 @@
+# run with: docker compose up -d
+
+version: "3.9"
+
+services:
+  rabbitmq:
+    # sets up the rabbitMQ image along with the two ports
+    image: rabbitmq:3-management
+    # Creating the localhost ports
+    ports:
+      - "5672:5672"      # Apps
+      - "15672:15672"    # management 
+
+  provisioner:
+    # set up the running of the python script in the container 
+    image: python:3.11-alpine
+    depends_on:
+      - rabbitmq                  # depends on rabbitMQ starting up 
+    working_dir: /app
+    volumes:
+      - ./:/app                   # expects queues.py in the project root
+    environment:
+      AMQP_HOST: rabbitmq
+      AMQP_PORT: "5672"
+      AMQP_USER: jack
+      AMQP_PASS: jack
+      AMQP_VHOST: "/"
+      QUEUES: "suspicion"
+    command: >
+      sh -lc "pip install --no-cache-dir pika==1.3.2 && python queues.py"
+    restart: "no"
