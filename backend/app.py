@@ -39,6 +39,10 @@ def suspicion_result(payload: YoloInput = Body(..., embed=False)):
         return SuspicionResponse(message="you're in the clear, buddy")
         # return {"message": "you're in the clear, buddy"}
 
+
+@app.post("/api/videoResult", response_model=VideoResponse)
+def video_result(payload: YoloInput = Body(..., embed=False)):
+    return VideoResponse("This is a Video")
 # Simple health for k8s/compose
 @app.get("/healthz")
 def health():

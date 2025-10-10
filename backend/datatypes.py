@@ -14,3 +14,5 @@ class YoloInput(BaseModel):
 
 class SuspicionResponse(BaseModel):
     message: str
+class VideoResponse(BaseModel):
+    message: str
