@@ -19,6 +19,7 @@ dist/
 
 # TLS private key (keep out of Git!)
 VideoContainer/key.pem
+VideoContainer/cert.pem
 
 # OS files
 .DS_Store

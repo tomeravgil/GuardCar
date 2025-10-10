@@ -3,7 +3,9 @@
 ## Prerequisites
 
 - Python 3.x installed on both sender (Raspberry Pi) and receiver machines.
-- Required Python packages: `opencv-python`, `numpy`, `picamera2` (for sender), etc.
+- Required Python packages: 
+  - Sender (Pi): `opencv-python`, `numpy`, `picamera2`
+  - Receiver (Client): `opencv-python`, `numpy`
 - SSL certificate and key files (`cert.pem`, `key.pem`) placed in the same directory as `sender.py`.
 - Network connectivity between sender and receiver.
 
