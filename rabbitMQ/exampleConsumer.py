@@ -1,6 +1,5 @@
 import pika, sys
 
-
 # information to be able to connect to the container 
 USER = "guest"       
 PASS = "guest"       
@@ -20,7 +19,7 @@ ch.queue_declare(queue="suspicion", durable=True)
 print("Waiting for messages on 'suspicion'. Press CTRL+C to exit.")
 
 # Manual-ack setup so you see it clearly
-def on_msg(ch, method, props, body):
+def on_msg(ch, method, body):
     print(f" [x] Got: {body.decode()}")
     ch.basic_ack(delivery_tag=method.delivery_tag)
 

@@ -20,12 +20,12 @@ services:
     volumes:
       - ./:/app                   # expects queues.py in the project root
     environment:
-      AMQP_HOST: rabbitmq
-      AMQP_PORT: "5672"
-      AMQP_USER: jack
-      AMQP_PASS: jack
-      AMQP_VHOST: "/"
-      QUEUES: "suspicion"
+      AMQP_HOST: ${AMQP_HOST:-rabbitmq}
+      AMQP_PORT: ${AMQP_PORT:-5672}
+      AMQP_USER: ${AMQP_USER:-jack}
+      AMQP_PASS: ${AMQP_PASS:-jack}
+      AMQP_VHOST: ${AMQP_VHOST:-/}
+      QUEUES: ${QUEUES:-suspicion}
     command: >
       sh -lc "pip install --no-cache-dir pika==1.3.2 && python queues.py"
     restart: "no"
