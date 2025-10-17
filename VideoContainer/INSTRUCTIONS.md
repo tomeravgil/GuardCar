@@ -3,11 +3,17 @@
 ## Prerequisites
 
 - Python 3.x installed on both sender (Raspberry Pi) and receiver machines.
-- Required Python packages: 
+- Required Python packages:
   - Sender (Pi): `opencv-python`, `numpy`, `picamera2`
   - Receiver (Client): `opencv-python`, `numpy`
-- SSL certificate and key files (`cert.pem`, `key.pem`) placed in the same directory as `sender.py`.
-- Network connectivity between sender and receiver.
+- SSL certificate and key files `cert.pem` and `key.pem` placed in the same directory as `sender.py` (exact names are required).
+- Network connectivity between sender and receiver (port `8443`).
+
+## Generating a self-signed cert (development)
+
+```bash
+openssl req -x509 -newkey rsa:4096 -nodes -keyout key.pem -out cert.pem -days 365 -subj "/CN=raspberrypi"
+
 
 ## Running the Sender (Raspberry Pi)
 
