@@ -1,3 +1,4 @@
+import sys
 import cv2
 from picamera2 import Picamera2
 import socket
@@ -10,7 +11,7 @@ import numpy as np
 HOST = "0.0.0.0"
 SERVER_PORT = 8443
 CERT_FILE = "cert.pem"
-KEY_FIlE = "key.pem"
+KEY_FILE = "key.pem"
 FPS = 30
 
 def create_tls_context():
@@ -18,23 +19,24 @@ def create_tls_context():
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 
     try:
-        context.load_cert_chain(certfile=CERT_FILE, keyfile=KEY_FIlE)
+        context.load_cert_chain(certfile=CERT_FILE, keyfile=KEY_FILE)
         print("Loaded TLS cert/key")
     except Exception as e:
         print("Failed to load cert/key:", e)
-        context.check_hostname = False
-        context.verify_mode = ssl.CERT_NONE
-    return context
+        return None
     return context
 
 def main():
     # Initialize cameras
-    cam0 = Picamera2(0)
-    cam1 = Picamera2(1)
+    try:
+        cam0 = Picamera2(0)
+        cam1 = Picamera2(1)
 
-    cam0.start()
-    cam1.start()
-
+        cam0.start()
+        cam1.start()
+    except Exception as e:
+        print("Camera initialization failed:", e)
+        sys.exit(1)
     context = create_tls_context()
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_sock:
