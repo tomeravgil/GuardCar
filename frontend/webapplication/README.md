@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Getting Started
+# Web App information
 
-First, run the development server:
+Brief reference for the frontend Next.js application in this repository.
 
-```bash
+## Quick summary
+- Framework: Next.js - Next v15.5.4
+- React: 19.1.0
+- Language: TypeScript
+- Node: v22.20.0
+- Styling: Tailwind CSS
+- Linting: ESLint configured (see `eslint.config.mjs`)
+
+This file gives a short setup + run guide, a small file map (where to find the layout/pages), the intended frontend tasks, and acceptance criteria.
+
+## Install & run (developer flow)
+Open a PowerShell terminal in `frontend/webapp` then:
+
+```powershell
+# install dependencies (npm is the default here)
+npm install
+
+# run the dev server (hot reload on change)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# build for production
+npm run build
+
+# run the production server after build
+npm run start
+
+# lint (fix issues manually as needed)
+npm run lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Notes:
+- The project `package.json` includes `dev`/`build`/`start` scripts and uses Next's turbopack flag in dev/build. If your environment doesn't support turbopack, remove `--turbopack` from the scripts in `package.json`.
+- You can also use `pnpm` or `yarn` if you prefer; the README in this repo shows the standard Next.js commands.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Default port: http://localhost:3000
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Intended frontend tasks & scope
+The frontend was scoped with these goals (developer checklist):
 
-## Learn More
+- Scaffold a fresh Next.js app (TypeScript + App Router)
+- Implement a global layout (Shell) that matches the wireframes
+- Add placeholder pages/sections to demonstrate routing and layout reuse
+- Provide a minimal design system using Tailwind (colors, spacing, typography)
+- Create mobile and desktop designs for each core page (in `frontend/Designs`)
+- Add linting (ESLint) and formatting defaults
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project files to know (important paths)
