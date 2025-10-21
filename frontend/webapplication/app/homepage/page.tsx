@@ -1,13 +1,24 @@
 "use client";
 import Sidebar from "../components/sidebar";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 
 // Functionality:
-    // sidebar and static content
+// Check if logged in on load, if no push to login
+// sidebar and static content
 export default function Homepage() {
 
+    const router = useRouter();
+        useEffect(() => {
+            const isLoggedIn = sessionStorage.getItem("loggedIn");
+            if (!isLoggedIn) {
+                router.push("/");
+            }
+        }, []);
 
-    // Structure
+    
+    // Structure:
 	// left side nav bar
     // main content area
         // centered section with title and subtitle
@@ -31,7 +42,7 @@ export default function Homepage() {
                     <h2 className="text-2xl font-bold mb-6 text-center">
                         Why GuardCar?
                     </h2>
-                    
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div className="bg-white rounded-xl shadow-md p-5 text-center hover:shadow-lg transition">
                             <h3 className="font-semibold mb-2">
