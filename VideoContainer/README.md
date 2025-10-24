@@ -1,45 +1,26 @@
-# GuardCar — VideoContainer
+# GuardCar Video Container
 
-Lightweight dual-camera streamer for a Raspberry Pi (sender) and a client (receiver). The sender captures two camera streams, stitches them side-by-side, encodes as JPEG frames and streams them over TLS to a connected receiver.
+## Layout
+- `VideoContainer/Sender/` – streams video over TLS.
+- `VideoContainer/Receiver/` – connects and displays the stream.
 
-## Features
-- Dual-camera capture (Pi)
-- Side-by-side combined frames
-- Encrypted transport (TLS, port 8443)
-- Simple receiver that displays the stream (press `q` to quit)
+## Prereqs
+- Docker or Python 3.11+.
+- `.env` files per app (see each folder).
+- Certificates in `VideoContainer/Sender/` or set `CERT_FILE`/`KEY_FILE`.
 
-## Prerequisites
-- Python 3.x on both sender (Raspberry Pi) and receiver machines.
-- Sender (Pi) packages: opencv-python, numpy, picamera2
-- Receiver (Client) packages: opencv-python, numpy
-- TLS cert/key files named `cert.pem` and `key.pem` in the sender directory.
+## Build (from repo root)
+- `docker build -f VideoContainer/Sender/Dockerfile -t sender:latest .`
+- `docker build -f VideoContainer/Receiver/Dockerfile -t receiver:latest .`
 
-## Quick start
+## Run with Docker
+- Sender: `docker run --rm --env-file VideoContainer/Sender/.env -p 8443:8443 sender:latest`
+- Receiver: `docker run --rm --env-file VideoContainer/Receiver/.env receiver:latest`
 
-Sender (on Raspberry Pi)
-1. Place `cert.pem` and `key.pem` next to `sender.py`.
-2. Install deps:
-   pip install opencv-python numpy picamera2
-3. Run:
-   python sender.py
+## Local dev
+- Sender: `pip install -r VideoContainer/Sender/requirements.txt && python VideoContainer/Sender/sender.py`
+- Receiver: `pip install -r VideoContainer/Receiver/requirements.txt && python VideoContainer/Receiver/receiver.py --pi-host <host>`
 
-Receiver (client)
-1. Install deps:
-   pip install opencv-python numpy
-2. Run (replace with Pi IP/hostname):
-   python receiver.py --pi-host <RASPBERRY_PI_IP>
-
-Default TLS port: 8443. Press `q` in the receiver window to exit.
-
-## Generating a self-signed cert (dev)
-openssl req -x509 -newkey rsa:4096 -nodes -keyout key.pem -out cert.pem -days 365 -subj "/CN=raspberrypi"
-
-## Troubleshooting
-- If the client fails to connect, confirm network reachability and that port 8443 is open.
-- If camera init fails on the Pi, verify camera modules and permissions.
-- If frames are garbled, check JPEG encoding errors and CPU load.
-- For TLS issues in development, ensure cert/key filenames are correct and match those loaded by sender.py.
-
-## Further info
-See INSTRUCTIONS.md in this directory for more detailed run and troubleshooting steps.
-
+## Notes
+- Env precedence: CLI > real env > `.env` > defaults.
+- Add `.env` to `.gitignore`.
