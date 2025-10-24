@@ -26,7 +26,7 @@ class VideoRunner:
         return frame_scores
 
 if __name__ == "__main__":
-    model = "yolov8n.pt"        
+    model = "yolo11n.pt"        
     testVideofolder = "testVideos"    
 
     if not os.path.isdir(testVideofolder):
