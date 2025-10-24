@@ -1,11 +1,13 @@
 from fastapi import FastAPI
 from datetime import datetime
-from app.api.routers import suspicion
-from app.api.schemas.thresholds import UIThresholds
+from api.routers import suspicion
+from api.routers import sse
+from api.schemas.thresholds import UIThresholds
 
 app = FastAPI(title="GuardCar API")
 
 app.include_router(suspicion.router)
+app.include_router(sse.router)
 
 @app.get("/")
 def root():
