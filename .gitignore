@@ -18,8 +18,8 @@ dist/
 *.swp
 
 # TLS private key (keep out of Git!)
-VideoContainer/key.pem
-VideoContainer/cert.pem
+VideoContainer/Sender/key.pem
+VideoContainer/Sender/cert.pem
 
 # OS files
 .DS_Store
