@@ -73,7 +73,6 @@ class TrackingDetectionService(DetectionService):
         for box in boxes:
             xyxy = box.xyxy[0].cpu().numpy()   # [x1, y1, x2, y2]
             conf = box.conf[0].cpu().item()    # confidence
-
             cls  = int(box.cls[0].cpu().item()) # class id
             id   = int(box.id[0].cpu().item())  # tracking id
             if id not in self.ids:
