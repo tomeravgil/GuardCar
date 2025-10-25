@@ -1,4 +1,4 @@
-# dockerfile
+# File: 'VideoContainer/Sender/Dockerfile'
 FROM python:3.11-slim-bookworm
 
 ENV PYTHONUNBUFFERED=1 \
@@ -8,15 +8,16 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Add Raspberry Pi repo (for python3-picamera2) and install runtime deps
+# Add Raspberry Pi repo and install deps (include openssl for runtime generation)
 RUN apt-get update -o Acquire::Retries=3 && apt-get install -y --no-install-recommends \
-      curl gnupg ca-certificates \
+      curl gnupg ca-certificates openssl \
  && curl -fsSL https://archive.raspberrypi.org/debian/raspberrypi.gpg.key \
     | gpg --dearmor -o /usr/share/keyrings/raspberrypi-archive-keyring.gpg \
  && echo "deb [signed-by=/usr/share/keyrings/raspberrypi-archive-keyring.gpg] http://archive.raspberrypi.org/debian/ bookworm main" \
     > /etc/apt/sources.list.d/raspi.list \
  && apt-get update -o Acquire::Retries=3 && apt-get install -y --no-install-recommends \
-      libv4l-0 libjpeg62-turbo libatlas-base-dev ffmpeg python3-picamera2 \
+      libv4l-0 libjpeg62-turbo libatlas-base-dev ffmpeg \
+      python3-picamera2 python3-opencv python3-numpy \
  && rm -rf /var/lib/apt/lists/*
 
 # Python deps
@@ -26,6 +27,8 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 # App
 COPY sender.py ./
+COPY entrypoint.sh ./
+RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 8443
-ENTRYPOINT ["python", "sender.py"]
+ENTRYPOINT ["sh", "/app/entrypoint.sh"]

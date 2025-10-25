@@ -21,8 +21,8 @@ Streams one or two cameras over TLS.
   --privileged \
   -v /run/udev:/run/udev:ro \
   --env-file ./VideoContainer/Sender/.env \
-  -v /path/to/cert.pem:/app/cert.pem:ro \
-  -v /path/to/key.pem:/app/key.pem:ro \
+  -v $(pwd)/VideoContainer/Sender/cert.pem:/app/cert.pem:ro \
+  -v $(pwd)/VideoContainer/Sender/key.pem:/app/key.pem:ro \
   guardcar-sender`
 
 ## Certs
