@@ -7,24 +7,32 @@ from core.services.sse.server_side_events import ServerSideEventsService
 
 ui_thresholds = UIThresholds(suspicion_score_threshold=70)
 _suspicion_service = SuspicionService()
-_sse_service = ServerSideEventsService()
+_sse_service = None  # will be initialized later
+
+
+def init_dependencies(shutdown_event):
+    global _sse_service
+    _sse_service = ServerSideEventsService(shutdown_event)
+
 
 def get_suspicion_service() -> ISuspicionService:
     return _suspicion_service
 
+
 def get_sse_service() -> IServerSideEventsService:
     return _sse_service
+
 
 def get_suspicion_use_case():
     suspicion_service = get_suspicion_service()
     sse_service = get_sse_service()
-
     return EvaluateSuspicionUseCase(
         suspicion_service=suspicion_service,
         sse_service=sse_service,
-        threshold=ui_thresholds.suspicion_score_threshold)
+        threshold=ui_thresholds.suspicion_score_threshold,
+    )
+
 
 def get_sse_use_case():
     sse_service = get_sse_service()
-
     return ServerSideEventsUseCase(sse_service=sse_service)
