@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import time
-import cv2
 import random
-from ultralytics import YOLO, Results
-from google.colab.patches import cv2_imshow
+from ultralytics import YOLO
 
 def getColours(cls_num):
     """Generate unique colors for each class ID"""
@@ -44,7 +42,7 @@ class DetectionService(ABC):
 
 
     @abstractmethod
-    def handle_result(self, result: Results):
+    def handle_result(self, result):
         """Abstract method to handle each detection result."""
         pass
 
