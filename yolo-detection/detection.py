@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from datetime import time
-import cv2
 import random
 from ultralytics import YOLO, Results
 from google.colab.patches import cv2_imshow
