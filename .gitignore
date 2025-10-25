@@ -1,6 +1,6 @@
 # Python virtual environment
 venv/
-
+.venv/
 # Byte-compiled / cache files
 __pycache__/
 *.pyc
