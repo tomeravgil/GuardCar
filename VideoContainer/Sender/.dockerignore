@@ -1,6 +1,5 @@
 # VCS
 .git
-.git/*
 .gitignore
 .gitattributes
 
@@ -10,7 +9,6 @@ __pycache__/
 *.pyo
 *.pyd
 *.py[co]
-.buildozer/
 build/
 dist/
 *.egg-info/
@@ -40,15 +38,10 @@ Thumbs.db
 # Logs
 *.log
 
-# Env files (don’t bake secrets into images)
+# Env files (don’t bake secrets)
 *.env
-**/*.env
-VideoContainer/Sender/.env
-VideoContainer/Receiver/.env
 
-# TLS keys/certs (exclude from build context)
-VideoContainer/Sender/key.pem
-VideoContainer/Sender/cert.pem
+# TLS keys/certs (keep out of build context)
 *.key
 *.crt
 *.pem
