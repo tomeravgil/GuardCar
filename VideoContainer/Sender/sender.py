@@ -28,30 +28,44 @@ class Config:
 
 #   2. Camera Hardware Manager
 class CameraManager:
-    """Manages the initialization and capturing from Picamera2."""
+    """Manages Picamera2 at a fixed 640x480 and combines frames."""
 
     def __init__(self):
         try:
             self.cam0 = Picamera2(0)
             self.cam1 = Picamera2(1)
+
+            # Create per‑camera video configs at 640x480
+            cfg0 = self.cam0.create_video_configuration(main={"size": (640, 480), "format": "RGB888"})
+            cfg1 = self.cam1.create_video_configuration(main={"size": (640, 480), "format": "RGB888"})
+
+            self.cam0.configure(cfg0)
+            self.cam1.configure(cfg1)
+
             self.cam0.start()
             self.cam1.start()
-            print("Cameras initialized and started.")
+            print("Cameras initialized at 640x480.")
         except Exception as e:
             print(f"FATAL: Camera initialization failed: {e}")
             sys.exit(1)
 
     def get_combined_frame(self):
-        """Captures from both cameras and combines them horizontally."""
-        frame0 = self.cam0.capture_array()
-        frame1 = self.cam1.capture_array()
-        return np.hstack((frame0, frame1))
+        """Captures both frames, stacks them horizontally, then converts to BGR."""
+        f0 = self.cam0.capture_array()
+        f1 = self.cam1.capture_array()
+
+        rgb_combined = np.hstack((f0, f1))
+
+        bgr_combined = cv2.cvtColor(rgb_combined, cv2.COLOR_RGB2BGR)
+
+        return bgr_combined
 
     def close(self):
         """Stops and closes camera resources."""
         print("Stopping cameras...")
         self.cam0.stop()
         self.cam1.stop()
+
 
 
 #   3. Main Server Class (The "Use Case")
