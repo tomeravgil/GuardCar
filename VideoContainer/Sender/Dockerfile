@@ -1,29 +1,35 @@
-# Use a base image for Raspberry Pi (ARM/bookworm)
+# File: `VideoContainer/Sender/Dockerfile`
 FROM python:3.11-slim-bookworm
 
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /app
 
-# Install system deps for headless OpenCV and camera access
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libv4l-dev \
-    libjpeg-dev \
-    libatlas-base-dev \
-    ffmpeg \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+# Add Raspberry Pi repo (for python3-picamera2) and install runtime deps
+RUN apt-get update -o Acquire::Retries=3 && apt-get install -y --no-install-recommends \
+      curl gnupg ca-certificates \
+ && curl -fsSL https://archive.raspberrypi.org/debian/raspberrypi.gpg.key \
+    | gpg --dearmor -o /usr/share/keyrings/raspberrypi-archive-keyring.gpg \
+ && echo "deb [signed-by=/usr/share/keyrings/raspberrypi-archive-keyring.gpg] http://archive.raspberrypi.org/debian/ bookworm main" \
+    > /etc/apt/sources.list.d/raspi.list \
+ && apt-get update -o Acquire::Retries=3 && apt-get install -y --no-install-recommends \
+      libv4l-0 libjpeg62-turbo libatlas-base-dev ffmpeg python3-picamera2 \
+ && rm -rf /var/lib/apt/lists/*
 
-# Copy your requirements.txt
+# Python deps
 COPY requirements.txt .
-# Install the headless-opencv version from it
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+ && pip install --no-cache-dir -r requirements.txt
 
-# Copy the sender script
+# App
 COPY sender.py ./
 
-# This EXPOSE is correct
 EXPOSE 8443
-# This ENTRYPOINT is also correct
 ENTRYPOINT ["python", "sender.py"]
+
+# File: `VideoContainer/Sender/requirements.txt`
+opencv-python-headless~=4.12.0.88
+numpy~=2.2.1
+python-dotenv>=1.0.1
