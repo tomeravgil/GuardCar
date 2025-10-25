@@ -20,8 +20,8 @@ class ServerSideEventsService(IServerSideEventsService):
                 # Use asyncio.wait to listen for both queue and shutdown signals
                 done, _ = await asyncio.wait(
                     [
-                        asyncio.create_task(self.sse_queue.get()),
-                        asyncio.create_task(self.shutdown_event.wait()),
+                        self.sse_queue.get(),
+                        self.shutdown_event.wait(),
                     ],
                     return_when=asyncio.FIRST_COMPLETED,
                 )
