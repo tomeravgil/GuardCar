@@ -1,9 +1,10 @@
-# File: `VideoContainer/Sender/Dockerfile`
+# dockerfile
 FROM python:3.11-slim-bookworm
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    DEBIAN_FRONTEND=noninteractive
+    DEBIAN_FRONTEND=noninteractive \
+    PYTHONPATH=/usr/lib/python3/dist-packages
 
 WORKDIR /app
 
@@ -28,8 +29,3 @@ COPY sender.py ./
 
 EXPOSE 8443
 ENTRYPOINT ["python", "sender.py"]
-
-# File: `VideoContainer/Sender/requirements.txt`
-opencv-python-headless~=4.12.0.88
-numpy~=2.2.1
-python-dotenv>=1.0.1
