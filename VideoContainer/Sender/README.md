@@ -33,6 +33,12 @@ chmod 600 VideoContainer/Sender/key.pem
   guardcar-sender`
 
 
-## Local run (Pi or webcam fallback on Windows)
+## Local run (Pi only) with venv from project root or VideoContainer/Sender
+- `cd VideoContainer/Sender`
+- `python -m venv .venv`
+- `source venv/bin/activate`
+- `python -m pip install -U pip`
 - `pip install -r VideoContainer/Sender/requirements.txt`
+- `pip install python3-opencv python3-numpy`
+- `sudo apt install python3-picamera2` (Pi only)
 - `python VideoContainer/Sender/sender.py`
