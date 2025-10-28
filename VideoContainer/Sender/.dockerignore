@@ -38,8 +38,6 @@ Thumbs.db
 # Logs
 *.log
 
-# Env files (don’t bake secrets)
-*.env
 
 # TLS keys/certs (keep out of build context)
 *.key

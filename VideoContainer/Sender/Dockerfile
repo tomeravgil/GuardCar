@@ -1,31 +1,37 @@
-FROM arm64v8/python:3.11-slim-bookworm
+# 1. Use the 'bookworm' (Debian 12) version of the RPi-OS image.
+#    Bookworm natively uses Python 3.11.
+FROM ghcr.io/dtcooper/raspberrypi-os:python3.11-bookworm
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     DEBIAN_FRONTEND=noninteractive \
+    # This path is still needed for apt-installed packages
     PYTHONPATH=/usr/lib/python3/dist-packages
 
 WORKDIR /app
 
-# Add Raspberry Pi repo and install deps
+# 2. Install the 'bookworm' versions of all packages from apt
 RUN apt-get update -o Acquire::Retries=3 && apt-get install -y --no-install-recommends \
-      curl gnupg ca-certificates openssl \
- && curl -fsSL https://archive.raspberrypi.org/debian/raspberrypi.gpg.key \
-    | gpg --dearmor -o /usr/share/keyrings/raspberrypi-archive-keyring.gpg \
- && echo "deb [signed-by=/usr/share/keyrings/raspberrypi-archive-keyring.gpg] http://archive.raspberrypi.org/debian/ bookworm main" \
-    > /etc/apt/sources.list.d/raspi.list \
- && apt-get update -o Acquire::Retries=3 && apt-get install -y --no-install-recommends \
+      # System tools
+      ca-certificates \
+      # Python packages from APT (for stability)
+      python3-picamera2 \
+      python3-libcamera \
+      python3-opencv \
+      python3-numpy \
+      # Runtime libraries
       libv4l-0 libjpeg62-turbo libatlas-base-dev ffmpeg \
-      python3-picamera2 python3-opencv python3-numpy \
  && rm -rf /var/lib/apt/lists/*
 
-# Python deps
+# 3. Copy requirements.txt, which must ONLY contain pip-specific packages
 COPY requirements.txt .
+# We use --break-system-packages because it's required on bookworm
 RUN pip install --no-cache-dir --upgrade pip \
- && pip install --no-cache-dir -r requirements.txt
+ && pip install --no-cache-dir --break-system-packages -r requirements.txt
 
 # App
-COPY sender.py ./
+COPY sender.py .env* ./
 
 EXPOSE 8443
-CMD ["python", "/app/sender.py"]
+# Use python3 to be explicit
+CMD ["python3", "sender.py"]
