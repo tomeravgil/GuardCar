@@ -9,7 +9,6 @@ import { usePathname } from "next/navigation";
 export default function Sidebar() {
   	const pathname = usePathname();
   	const navItems = [
-    	{ name: "Home", icon: House, path: "/homepage" },
     	{ name: "Live", icon: Wifi, path: "/live" },
     	{ name: "Playback", icon: Video, path: "/playback" },
     	{ name: "Settings", icon: Settings, path: "/settings" },

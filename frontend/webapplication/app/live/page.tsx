@@ -29,7 +29,6 @@ export default function LivePage() {
 	// left side nave bar full length of screen, width 48
 	// main content area centered
 		// video player container with black background, rounded corners
-		// button below to start recording	
 	return (
 		<div className="flex min-h-screen bg-gray-50">
 			<Sidebar />
@@ -44,15 +43,6 @@ export default function LivePage() {
 						muted
                         controlsList="nodownload"
 					/>
-				</div>
-
-				<div className="mt-6 flex gap-4">
-					<button
-						onClick={startRecording}
-						className="px-6 py-3 bg-red-600 text-white rounded-lg shadow hover:bg-red-700 transition"
-					>
-						Start Recording (Server)
-					</button>
 				</div>
 			</div>
 		</div>

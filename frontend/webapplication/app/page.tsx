@@ -14,7 +14,7 @@ export default function LoginPage() {
 	useEffect(() => {
 		const isLoggedIn = sessionStorage.getItem("loggedIn");
 		if (isLoggedIn) {
-			router.push("/homepage");
+			router.push("/live");
 		}
 	}, []);
 
