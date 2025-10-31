@@ -76,37 +76,36 @@ export default function PlaybackPage() {
 					)}
 				</div>
 
-				{videoFiles.length > pageSize && (
-					<div className="flex items-center gap-4 mt-6">
-						<button
-							onClick={goPrev}
-							disabled={page === 0}
-							className={`px-4 py-2 rounded-md text-white font-medium ${
-								page === 0
-								? "bg-gray-500 cursor-not-allowed"
-								: "bg-blue-500 hover:bg-blue-600"
-							} transition`}
-						>
-							Previous
-						</button>
+				<div className="flex items-center gap-4 mt-6">
+					<button
+						onClick={goPrev}
+						disabled={page === 0}
+						className={`px-4 py-2 rounded-md text-white font-medium ${
+							page === 0
+							? "bg-gray-500 cursor-not-allowed"
+							: "bg-blue-500 hover:bg-blue-600"
+						} transition`}
+					>
+						Previous
+					</button>
 
-						<span className="text-gray-700">
-							Page {page + 1} of {totalPages}
-						</span>
+					<span className="text-gray-700">
+						Page {page + 1} of {totalPages}
+					</span>
 
-						<button
-							onClick={goNext}
-							disabled={page >= totalPages - 1}
-							className={`px-4 py-2 rounded-md text-white font-medium ${
-								page >= totalPages - 1
-								? "bg-gray-500 cursor-not-allowed"
-								: "bg-blue-500 hover:bg-blue-600"
-							} transition`}
-						>
-							Next
-						</button>
-					</div>
-				)}
+					<button
+						onClick={goNext}
+						disabled={page >= totalPages - 1}
+						className={`px-4 py-2 rounded-md text-white font-medium ${
+							page >= totalPages - 1
+							? "bg-gray-500 cursor-not-allowed"
+							: "bg-blue-500 hover:bg-blue-600"
+						} transition`}
+					>
+						Next
+					</button>
+				</div>
+				
 			</div>
 		</div>
 	);

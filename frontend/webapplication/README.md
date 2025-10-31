@@ -14,7 +14,7 @@ Brief reference for the frontend Next.js application in this repository.
 This file gives a short setup + run guide, a small file map (where to find the layout/pages), the intended frontend tasks, and acceptance criteria.
 
 ## Install & run (developer flow)
-Open a PowerShell terminal in `frontend/webapp` then:
+Open a Comand Promt terminal in `frontend/webapp` then:
 
 ```powershell
 # install dependencies (npm is the default here)
@@ -22,15 +22,6 @@ npm install
 
 # run the dev server (hot reload on change)
 npm run dev
-
-# build for production
-npm run build
-
-# run the production server after build
-npm run start
-
-# lint (fix issues manually as needed)
-npm run lint
 ```
 
 Notes:
@@ -49,4 +40,9 @@ The frontend was scoped with these goals (developer checklist):
 - Create mobile and desktop designs for each core page (in `frontend/Designs`)
 - Add linting (ESLint) and formatting defaults
 
-## Project files to know (important paths)
+## To Do
+- clean up all pages
+### live page
+- add real source
+### settings
+- connect to api

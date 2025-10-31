@@ -76,7 +76,7 @@ export default function Homepage() {
                                 Secure Cloud Storage
                             </h3>
                             <p className="text-sm text-gray-600">
-                                Access past events anytime with encrypted video history.
+                                Access past events anytime with video history.
                             </p>
                         </div>
                     </div>
