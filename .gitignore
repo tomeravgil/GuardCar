@@ -25,3 +25,70 @@ VideoContainer/Sender/cert.pem
 .DS_Store
 Thumbs.db
 
+# --- Python basics ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Virtual environments ---
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+
+# --- Distribution / packaging ---
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# --- PyInstaller ---
+*.manifest
+*.spec
+
+# --- Unit test / coverage reports ---
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+*.hypothesis/
+.pytest_cache/
+
+# --- Jupyter Notebook ---
+.ipynb_checkpoints
+*.ipynb
+
+# --- mypy / type checking ---
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# --- IDE / editor junk ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*.DS_Store
+
+# --- Logs ---
+*.log
+.DS_Store
+frontend/.DS_Store
