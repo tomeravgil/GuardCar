@@ -32,17 +32,24 @@ export default function LivePage() {
 	return (
 		<div className="flex min-h-screen bg-gray-50">
 			<Sidebar />
-
-			<div className="flex flex-col items-center justify-center flex-1 bg-gray-100">
-				<div className="relative w-[1200px] h-[700px] bg-black rounded-2xl overflow-hidden shadow-lg flex items-center justify-center">
-					<video
-						ref={videoRef}
-						src="https://www.w3schools.com/html/mov_bbb.mp4" // get real source from server
-						className="w-full h-full object-cover rounded-2xl"
-						controls
-						muted
-                        controlsList="nodownload"
-					/>
+			
+			<div className="flex flex-col flex-1 bg-gray-100">
+				
+				<header className="w-full px-8 py-4 border-b border-gray-300 bg-white shadow-sm">
+					<h1 className="text-3xl font-semibold text-gray-800">Live View</h1>
+				</header>
+			
+				<div className="flex flex-col items-center justify-center flex-1 bg-gray-100">
+					<div className="relative w-[1200px] h-[700px] bg-black rounded-2xl overflow-hidden shadow-lg flex items-center justify-center">
+						<video
+							ref={videoRef}
+							src="https://www.w3schools.com/html/mov_bbb.mp4" // get real source from server
+							className="w-full h-full object-cover rounded-2xl"
+							controls
+							muted
+							controlsList="nodownload"
+						/>
+					</div>
 				</div>
 			</div>
 		</div>
