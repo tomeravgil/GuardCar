@@ -1,3 +1,30 @@
+# Python virtual environment
+venv/
+.venv/
+# Byte-compiled / cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Distribution / build folders
+build/
+dist/
+*.egg-info/
+
+# IDE / editor settings
+.vscode/
+.idea/
+*.swp
+
+# TLS private key (keep out of Git!)
+VideoContainer/Sender/key.pem
+VideoContainer/Sender/cert.pem
+
+# OS files
+.DS_Store
+Thumbs.db
+
 # --- Python basics ---
 __pycache__/
 *.py[cod]
