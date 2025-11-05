@@ -3,54 +3,11 @@ from datetime import time
 import random
 from ultralytics import YOLO
 
-def getColours(cls_num):
-    """Generate unique colors for each class ID"""
-    random.seed(cls_num)
-    return tuple(random.randint(0, 255) for _ in range(3))
-
-
-class DetectionService(ABC):
-    def __init__(self, model_path: str, streaming_file_path: str = None):
-        self.model = self.load_model(model_path)
-        self.streaming_urls = []
-        if streaming_file_path:
-            self.load_streaming_urls(streaming_file_path)
-
-    def load_model(self, model_path: str) -> YOLO:
-        """Load a YOLO model from the specified path."""
-        try:
-            model = YOLO(model_path)
-            return model
-        except Exception as e:
-            print(f"Error loading model: {e}")
-            return None
-        
-    def load_streaming_urls(self, streaming_file_path: str):
-        """Load streaming URLs from a text file."""
-        try:
-            with open(streaming_file_path, 'r') as file:
-                self.streaming_urls = [line.strip() for line in file if line.strip()]
-        except Exception as e:
-            print(f"Error loading streaming URLs: {e}")
-        
-    def detect_and_process(self):
-        """Perform object detection on an image and display the results."""
-
-        for source_file in self.streaming_urls:
-            for result in self.model.track(source_file, stream=True, tracker=self.tracker):
-                self.handle_result(result)
-
-
-    @abstractmethod
-    def handle_result(self, result):
-        """Abstract method to handle each detection result."""
-        pass
-
 class TrackingDetectionService(DetectionService):
 
-    def __init__(self, model_path: str, streaming_file_path: str = None):
+    def __init__(self, model_path: str):
         self.tracker = 'bytetrack.yaml'
-        super().__init__(model_path, streaming_file_path)
+        super().__init__(model_path)
         self.ids = {}
 
         # TODO make it so the user can set these values
@@ -62,6 +19,12 @@ class TrackingDetectionService(DetectionService):
             5: 0.04,  # bus
             7: 0.04   # truck
         }
+
+        self.track_history = defaultdict(lambda: [])
+    
+    def detect_and_process(self, frame):
+        result = self.model.track(frame, stream=True, tracker=self.tracker)
+        return self.handle_result(result)
 
     def handle_result(self, result):
         """Handle the detection result for an image."""
@@ -81,7 +44,6 @@ class TrackingDetectionService(DetectionService):
             time_score = time.time() - self.ids[id] * .5
             class_score = 1e-10 # to avoid multiplication by zero
             if cls in self.class_to_score:
-
                 # multiply by confidence to give more weight to high confidence detections
                 class_score = (self.class_to_score[cls]*conf) * (1/3)
 
