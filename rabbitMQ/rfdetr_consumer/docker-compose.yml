@@ -3,8 +3,8 @@ services:
     image: rabbitmq:3-management
     container_name: guardcar-rabbitmq
     ports:
-      - "5672:5672"      # AMQP protocol
-      - "15672:15672"    # Management UI
+      - "5672:5672"
+      - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
@@ -18,14 +18,17 @@ services:
       - guardcar-network
 
   rfdetr-consumer:
-    build:
-      context: .
-      dockerfile: Dockerfile.rfdetr-consumer
     container_name: rfdetr-consumer
+    build:
+      context: ../..
+      dockerfile: rabbitMQ/rfdetr_consumer/Dockerfile.rfdetr-consumer
     depends_on:
       rabbitmq:
         condition: service_healthy
     environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
       - RABBITMQ_VHOST=${RABBITMQ_DEFAULT_VHOST:-/}
@@ -33,11 +36,19 @@ services:
       - RABBITMQ_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
       - PYTHONUNBUFFERED=1
     volumes:
-      - ./detection:/app/detection
+      - ../../detection:/app/detection
     networks:
       - guardcar-network
     restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
 networks:
   guardcar-network:
     driver: bridge
+

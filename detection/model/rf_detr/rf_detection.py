@@ -1,5 +1,5 @@
 from ..detection_service import DetectionService
-from inference import get_model
+from inference.models.utils import get_model
 from typing import Optional
 
 class RFDETRDetectionService(DetectionService):

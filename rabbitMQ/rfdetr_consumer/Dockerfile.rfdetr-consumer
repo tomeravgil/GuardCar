@@ -1,26 +1,32 @@
-FROM python:3.13-slim
+FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04
+
+# System dependencies
+# Install Python 3.11 and system deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.11 python3.11-dev python3.11-distutils \
+    git libgl1 libglib2.0-0 libsm6 libxext6 curl \
+ && rm -rf /var/lib/apt/lists/*
+
+# Install pip for Python 3.11
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
+
+# Make python3 point to python3.11 (optional but recommended)
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
+    update-alternatives --set python3 /usr/bin/python3.11
+
+# Upgrade pip
+RUN python3 -m pip install --upgrade pip
 
 WORKDIR /app
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements first (cache layer)
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# ---- Copy your detection code exactly as-is ----
 COPY detection/model/rf_detr/ detection/model/rf_detr/
 COPY detection/model/detection_service.py detection/model/detection_service.py
 COPY detection/processing/ detection/processing/
-
-# If your consumer script is top-level
-COPY run_rfdetr_consumer.py .
-
-# If you have a rabbitMQ package needed:
 COPY rabbitMQ/ rabbitMQ/
+# PyTorch CUDA 12.1/12.2 wheels
+RUN pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+RUN pip3 install --upgrade inference
+# Install project Python deps
+RUN pip3 install --no-cache-dir -r rabbitMQ/rfdetr_consumer/requirements.txt
 
-EXPOSE 8000
+CMD ["python3", "-m", "rabbitMQ.rfdetr_consumer.run_rfdetr_consumer"]
 
-CMD ["python", "-m", "rabbitMQ/run_rfdetr_consumer.py"]
