@@ -9,7 +9,7 @@ class RFDETRDetectionService(DetectionService):
     def load_model(self, model_path: Optional[str] = None):
         """Load a RFDETR model from the specified path."""
         try:
-            model = get_model(model_path)
+            model = get_model(model_path, device="cuda")
             return model
         except Exception as e:
             print(f"Error loading model: {e}")

@@ -1,0 +1,26 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first (cache layer)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# ---- Copy your detection code exactly as-is ----
+COPY detection/model/rf_detr/ detection/model/rf_detr/
+COPY detection/model/detection_service.py detection/model/detection_service.py
+COPY detection/processing/ detection/processing/
+
+# If your consumer script is top-level
+COPY run_rfdetr_consumer.py .
+
+# If you have a rabbitMQ package needed:
+COPY rabbitMQ/ rabbitMQ/
+
+EXPOSE 8000
+
+CMD ["python", "-m", "rabbitMQ/run_rfdetr_consumer.py"]
