@@ -1,4 +1,4 @@
 rfdetr
 pika
 pybreaker
-inference
+inference-gpu

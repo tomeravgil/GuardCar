@@ -26,6 +26,8 @@ services:
       rabbitmq:
         condition: service_healthy
     environment:
+      - ONNXRUNTIME_EXECUTION_PROVIDERS=TensorrtExecutionProvider,CUDAExecutionProvider
+      - TENSORRT_CACHE_PATH=/trt_cache
       - CUDA_VISIBLE_DEVICES=0
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
@@ -37,6 +39,7 @@ services:
       - PYTHONUNBUFFERED=1
     volumes:
       - ../../detection:/app/detection
+      - ./trt_cache:/trt_cache
     networks:
       - guardcar-network
     restart: unless-stopped

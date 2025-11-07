@@ -24,7 +24,6 @@ COPY detection/processing/ detection/processing/
 COPY rabbitMQ/ rabbitMQ/
 # PyTorch CUDA 12.1/12.2 wheels
 RUN pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu121
-RUN pip3 install --upgrade inference
 # Install project Python deps
 RUN pip3 install --no-cache-dir -r rabbitMQ/rfdetr_consumer/requirements.txt
 
