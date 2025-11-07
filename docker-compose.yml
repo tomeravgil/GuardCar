@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: guardcar-rabbitmq
+    ports:
+      - "5672:5672"      # AMQP protocol
+      - "15672:15672"    # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_DEFAULT_VHOST:-/}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - guardcar-network
+
+  rfdetr-consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile.rfdetr-consumer
+    container_name: rfdetr-consumer
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_VHOST=${RABBITMQ_DEFAULT_VHOST:-/}
+      - RABBITMQ_USER=${RABBITMQ_DEFAULT_USER:-guest}
+      - RABBITMQ_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./detection:/app/detection
+    networks:
+      - guardcar-network
+    restart: unless-stopped
+
+networks:
+  guardcar-network:
+    driver: bridge
