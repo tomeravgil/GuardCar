@@ -68,7 +68,6 @@ def main():
     
     logger.info("Starting RF-DETR Consumer Service")
     logger.info(f"Connecting to RabbitMQ at {args.host}:{args.port}{args.vhost} as {args.user}")
-    print("nere")
     try:
         detection_service = RFDETRDetectionService("rfdetr-nano")
         # Initialize and start consumer

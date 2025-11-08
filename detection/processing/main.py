@@ -43,7 +43,6 @@ def main():
         )
     except Exception as e:
         print(f"Failed to initialize RF-DETR producer: {e}")
-        rfdetr_producer = None
 
     rf_detection_service = RFDETRRemoteServiceAdapter(rfdetr_producer)
 

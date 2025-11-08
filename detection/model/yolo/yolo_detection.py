@@ -22,7 +22,7 @@ class YOLODetectionService(DetectionService):
         if isinstance(frame, (bytes, bytearray)):
             frame = cv2.imdecode(np.frombuffer(frame, np.uint8), cv2.IMREAD_COLOR)
 
-        result = self.model.predict(frame)[0]
+        result = self.model.predict(frame, verbose=False)[0]
         detections = []
         names = self.model.names
 
