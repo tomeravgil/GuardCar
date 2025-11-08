@@ -1,6 +1,8 @@
 from ultralytics import YOLO
 from typing import Optional
 from detection.model.detection_service import DetectionService
+import cv2
+import numpy as np
 
 class YOLODetectionService(DetectionService):
     def __init__(self, model_path: str):
@@ -16,5 +18,23 @@ class YOLODetectionService(DetectionService):
             return None
         
     def detect(self, frame):
-        """Perform object detection on an image."""
-        return self.model.predict(frame)
+        # Decode if needed
+        if isinstance(frame, (bytes, bytearray)):
+            frame = cv2.imdecode(np.frombuffer(frame, np.uint8), cv2.IMREAD_COLOR)
+
+        result = self.model.predict(frame)[0]
+        detections = []
+        names = self.model.names
+
+        for box in result.boxes:
+            x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().tolist()
+            conf = float(box.conf.cpu().numpy())
+            cls_id = int(box.cls.cpu().numpy())
+
+            detections.append({
+                "bbox": [float(x1), float(y1), float(x2), float(y2)],
+                "class": names[cls_id],
+                "confidence": conf
+            })
+
+        return detections
