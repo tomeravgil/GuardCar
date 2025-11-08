@@ -1,6 +1,5 @@
 import pika
 import uuid
-import json
 import time
 
 class RFDETRProducer:
@@ -18,7 +17,7 @@ class RFDETRProducer:
     def _on_response(self, ch, method, props, body):
         # Only process the response that matches the original request ID
         if props.correlation_id == self.correlation_id:
-            self.response = body.decode("utf-8")  # or JSON load if needed
+            self.response = body.decode("utf-8")
 
 
     def send_frame(self, frame_bytes, timeout=.5):

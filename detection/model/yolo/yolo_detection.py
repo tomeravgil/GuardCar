@@ -17,6 +17,10 @@ class YOLODetectionService(DetectionService):
             print(f"Error loading model: {e}")
             return None
         
+
+    def get_classes(self):
+        return {name.lower(): idx for idx, name in self.model.names.items()}
+
     def detect(self, frame):
         # Decode if needed
         if isinstance(frame, (bytes, bytearray)):
@@ -33,8 +37,8 @@ class YOLODetectionService(DetectionService):
 
             detections.append({
                 "bbox": [float(x1), float(y1), float(x2), float(y2)],
-                "class": names[cls_id],
-                "confidence": conf
+                "cls_id": cls_id,
+                "conf": conf
             })
 
         return detections
