@@ -40,10 +40,8 @@ class Processor:
                         frame_bytes
                     )
                 except pybreaker.CircuitBreakerError:
-                    print("[CB OPEN] Falling back to YOLO")
                     result = self.yolo_detection_service.detect(frame_bytes)
                 except Exception:
-                    print("[RF FAIL] Falling back to YOLO")
                     result = self.yolo_detection_service.detect(resized)
 
                 # Parse detection output safely
