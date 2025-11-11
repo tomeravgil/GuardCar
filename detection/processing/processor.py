@@ -1,7 +1,14 @@
 import cv2
 import pybreaker
 import time
-import json
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+
+logger = logging.getLogger(__name__)
 
 class Processor:
     def __init__(self, yolo_detection_service, rf_detection_service, tracking_service):
@@ -22,10 +29,10 @@ class Processor:
         cap = cv2.VideoCapture(0)
 
         if not cap.isOpened():
-            print("Error: Could not open camera.")
+            logger.error("Error: Could not open camera.")
             return
 
-        print("Starting video capture. Press 'q' to quit...")
+        logger.info("Starting video capture. Press 'q' to quit...")
         prev_time = time.time()
 
         try:
@@ -58,13 +65,13 @@ class Processor:
                             "cls_id": cls_id,
                             "conf": float(det["confidence"])
                         })
-
                 except pybreaker.CircuitBreakerError:
-                    # RF timed out → fallback to YOLO
+                    # RF timed out so fallback to YOLO
+                    logger.warning("RF-DETR timed out, falling back to YOLO")
                     detections = self.yolo_detection_service.detect(frame_bytes)
-
-                except Exception:
-                    # RF crashed → fallback to YOLO safely
+                except Exception as e:
+                    # RF crashed so fallback to YOLO safely
+                    logger.error(f"RF-DETR error: {e}, falling back to YOLO")
                     detections = self.yolo_detection_service.detect(resized)
 
                 # ---- Run Tracking (adds track_id internally) ----
@@ -77,8 +84,8 @@ class Processor:
 
                     cls_name = self.id_to_name.get(cls_id, "obj")
 
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0,255,0), 2)
-                    cv2.putText(frame, f"{cls_name} #{track_id}",
+                    cv2.rectangle(resized, (x1, y1), (x2, y2), (0,255,0), 2)
+                    cv2.putText(resized, f"{cls_name} #{track_id}",
                                 (x1, y1 - 8),
                                 cv2.FONT_HERSHEY_SIMPLEX,
                                 0.6, (0,255,0), 2)
@@ -88,11 +95,11 @@ class Processor:
                 fps = 1 / (current_time - prev_time)
                 prev_time = current_time
 
-                cv2.putText(frame, f"FPS: {fps:.1f} Score: {score:.2f}",
+                cv2.putText(resized, f"FPS: {fps:.1f} Score: {score:.2f}",
                             (10, 30), cv2.FONT_HERSHEY_SIMPLEX,
                             0.7, (0, 255, 255), 2)
 
-                cv2.imshow("Camera Feed", frame)
+                cv2.imshow("Camera Feed", resized)
 
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
@@ -100,4 +107,4 @@ class Processor:
         finally:
             cap.release()
             cv2.destroyAllWindows()
-            print("Video stream stopped and resources released.")
+            logger.info("Video stream stopped and resources released.")

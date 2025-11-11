@@ -3,6 +3,15 @@ from typing import Optional
 from detection.model.detection_service import DetectionService
 import cv2
 import numpy as np
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+
+logger = logging.getLogger(__name__)
+
 
 class YOLODetectionService(DetectionService):
     def __init__(self, model_path: str):
@@ -12,9 +21,10 @@ class YOLODetectionService(DetectionService):
         """Load a YOLO model from the specified path."""
         try:
             model = YOLO(model_path)
+            logger.info(f"Successfully loaded YOLO model from {model_path}")
             return model
         except Exception as e:
-            print(f"Error loading model: {e}")
+            logger.error(f"Error loading YOLO model from {model_path}: {e}")
             return None
         
 

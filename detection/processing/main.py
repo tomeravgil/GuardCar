@@ -4,45 +4,29 @@ from detection.processing.processor import Processor
 from detection.model.yolo.yolo_detection import YOLODetectionService
 from detection.model.rf_detr.rf_detr_producer import RFDETRProducer
 from detection.tracking.tracking_service import TrackingDetectionService
-import pybreaker
+from detection.processing.rf_detr_adapter import RFDETRRemoteServiceAdapter
+import logging
 
-class RFDETRRemoteServiceAdapter:
-    """
-    Adapter that wraps RFDETRProducer so it matches the .detect() signature
-    expected by the Processor.
-    """
-    def __init__(self, producer: RFDETRProducer):
-        self.producer = producer
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
 
-    def detect(self, frame_bytes):
-        """
-        Send the frame to the remote RF-DETR server and wait for the response.
-        The producer returns a string/JSON — if needed, parse into your
-        detection result format here.
-        """
-        if self.producer is None:
-            raise pybreaker.CircuitBreakerError("RF-DETR producer not initialized")
-
-        response = self.producer.send_frame(frame_bytes)
-        return self._parse_response(response)
-
-    def _parse_response(self, response):
-        return response
+logger = logging.getLogger(__name__)
 
 
 def main():
     yolo_detection_service = YOLODetectionService(model_path="yolov8n.pt")
-
     rfdetr_producer = None
     try:
         rfdetr_producer = RFDETRProducer(
             user="tomer",
-            password="123",
+            password="yourpassword",
             host="192.168.1.68",
             vhost="/"
         )
     except Exception as e:
-        print(f"Failed to initialize RF-DETR producer: {e}")
+        logger.error(f"Failed to initialize RF-DETR producer: {e}")
 
     rf_detection_service = RFDETRRemoteServiceAdapter(rfdetr_producer)
 

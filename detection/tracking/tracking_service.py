@@ -1,73 +1,99 @@
 import time
 import numpy as np
 from collections import defaultdict
-
+import math
 from supervision.tracker.byte_tracker.core import ByteTrack
 from supervision.detection.core import Detections
 
 
+
 class TrackingDetectionService:
     def __init__(self):
-        self.tracker = ByteTrack()
-        self.first_seen = defaultdict(lambda: time.time())
+        # ByteTrack tuned for webcam tracking stability
+        self.tracker = ByteTrack(
+            lost_track_buffer=30,
+            frame_rate=30,
+            minimum_consecutive_frames=15,
+        )
 
+        # Store the timestamp when each track_id first appeared
+        self.first_seen = {}
+        self.last_seen = {}
+
+        # Class weighting bonus
         self.class_to_score = {
-            0: 0.05,
-            1: 0.01,
-            2: 0.04,
-            3: 0.02,
-            5: 0.04,
-            7: 0.04
+            0: 0.12,  # person: biggest threat
+            1: 0.01,  # bicycle: basically irrelevant
+            2: 0.04,  # car
+            3: 0.04,  # motorcycle
+            5: 0.06,  # bus
+            7: 0.06   # truck
         }
+
+
+        # Max score scaling target
+        self.max_score = 100.0
+
 
     def process_detections(self, detections, frame_shape):
         if not detections:
+            self._cleanup_lost_tracks()
             return 0.0, Detections.empty()
 
         H, W = frame_shape
 
-        # Convert raw dets → supervision.Detections
         xyxy = np.array([d["bbox"] for d in detections], dtype=float)
-        confidence = np.array([d["conf"] for d in detections], dtype=float)
-        class_id = np.array([d["cls_id"] for d in detections], dtype=int)
+        conf = np.array([d["conf"] for d in detections], dtype=float)
+        cls = np.array([d["cls_id"] for d in detections], dtype=int)
 
-        det = Detections(
-            xyxy=xyxy,
-            confidence=confidence,
-            class_id=class_id
-        )
-
+        det = Detections(xyxy=xyxy, confidence=conf, class_id=cls)
         tracked = self.tracker.update_with_detections(det)
 
-        # If no objects tracked → no score
+        # No tracks
         if len(tracked) == 0:
+            self._cleanup_lost_tracks()
             return 0.0, tracked
 
         scores = []
+        base_class_scores = []
+        now = time.time()
+
         for i in range(len(tracked)):
             x1, y1, x2, y2 = tracked.xyxy[i]
             cls_id = int(tracked.class_id[i])
             conf = float(tracked.confidence[i])
             track_id = int(tracked.tracker_id[i])
 
-            area_ratio = (x2 - x1) * (y2 - y1) / (W * H)
+            area_ratio = (((x2 - x1) * (y2 - y1)) / (W * H))*100
 
-            # ✅ Only initialize first_seen once per track_id
+            # Initialize timestamp if new track
             if track_id not in self.first_seen:
-                self.first_seen[track_id] = time.time()
-            duration = time.time() - self.first_seen[track_id]
+                self.first_seen[track_id] = now
+            self.last_seen[track_id] = now
 
-            class_bonus = self.class_to_score.get(cls_id, 0.0) * conf
+            duration = now - self.first_seen[track_id]
 
-            scores.append((area_ratio, duration, class_bonus))
+            # A) Baseline score (smooth growth)
+            baseline = (
+                self.sigmoid(area_ratio, 50) +
+                self.sigmoid(duration, 30)
+            )
+            base_class_scores.append(self.class_to_score.get(cls_id, 0.0) * conf)
+            scores.append(baseline)
 
-        return self._score(scores), tracked
+        self._cleanup_lost_tracks()
+        class_influence = np.mean(base_class_scores) * 50
+        final_score = min(np.mean(scores) + class_influence, self.max_score)
+        return final_score, tracked
 
 
-    def _score(self, scores):
-        areas, times, classes = zip(*scores)
-        def norm(values):
-            mn, mx = min(values), max(values)
-            return [(v - mn) / (mx - mn + 1e-9) for v in values]
-        A, T, C = norm(areas), norm(times), norm(classes)
-        return sum((1/6*a + 0.5*t + 1/3*c) for a, t, c in zip(A, T, C)) / len(A)
+    def _cleanup_lost_tracks(self):
+        now = time.time()
+        remove_ids = [tid for tid, last in self.last_seen.items() if now - last > 1.0]
+        for tid in remove_ids:
+            self.first_seen.pop(tid, None)
+            self.last_seen.pop(tid, None)
+
+    def sigmoid(self, x, scale, max=0):
+        scaled_coefficient = (.2*scale)/scale
+        return scale / (1+math.exp(-(x-(max/2))*scaled_coefficient))

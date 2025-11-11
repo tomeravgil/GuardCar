@@ -1,6 +1,15 @@
 import pika
 import uuid
 import time
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+
+logger = logging.getLogger(__name__)
+
 
 class RFDETRProducer:
     def __init__(self, user, password, host, vhost):
@@ -24,7 +33,7 @@ class RFDETRProducer:
         try:
             return self._send_frame_internal(frame_bytes, timeout)
         except (pika.exceptions.AMQPError, ConnectionError, OSError):
-            print("[RF-DETR] Lost RabbitMQ connection. Reconnecting...")
+            logger.error("[RF-DETR] Lost RabbitMQ connection. Reconnecting...")
             try:
                 if not self._is_connected():
                     self._connect()
@@ -32,7 +41,7 @@ class RFDETRProducer:
                         raise Exception("Failed to reconnect to RabbitMQ")
                 return self._send_frame_internal(frame_bytes, timeout)
             except Exception as e:
-                print("[RF-DETR] Reconnect failed.")
+                logger.error("[RF-DETR] Reconnect failed.")
                 raise e
 
 

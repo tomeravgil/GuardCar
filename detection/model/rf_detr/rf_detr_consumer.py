@@ -1,5 +1,14 @@
 import pika
 import json
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+
+logger = logging.getLogger(__name__)
+
 class RFDETRConsumer:
     def __init__(self, 
                     user, 
@@ -25,6 +34,7 @@ class RFDETRConsumer:
         self.consume_channel.queue_declare(queue="rf-detr-suspicion-task", durable=True)
         self.produce_channel = self.connection.channel()
         self.produce_channel.queue_declare(queue="rf-detr-suspicion-result", durable=True)
+        logger.info("Connected to RabbitMQ and declared queues")
 
     def on_message(self, channel, method, properties, body):
         # Run inference
@@ -57,10 +67,13 @@ class RFDETRConsumer:
 
     def start(self):
         self.consume_channel.basic_qos(prefetch_count=1)
-        self.consume_channel.basic_consume(queue="rf-detr-suspicion-task", on_message_callback=self.on_message, auto_ack=False)
+        self.consume_channel.basic_consume(
+                                            queue="rf-detr-suspicion-task", 
+                                            on_message_callback=self.on_message, 
+                                            auto_ack=False)
         try:
             self.consume_channel.start_consuming()
         except KeyboardInterrupt:
             self.consume_channel.stop_consuming()
             self.connection.close()
-            print("Consumer stopped.")
+            logger.info("Consumer stopped.")
