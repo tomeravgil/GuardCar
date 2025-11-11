@@ -5,8 +5,6 @@ import math
 from supervision.tracker.byte_tracker.core import ByteTrack
 from supervision.detection.core import Detections
 
-
-
 class TrackingDetectionService:
     def __init__(self):
         # ByteTrack tuned for webcam tracking stability
@@ -21,16 +19,14 @@ class TrackingDetectionService:
         self.last_seen = {}
 
         # Class weighting bonus
-        self.class_to_score = {
-            0: 0.12,  # person: biggest threat
-            1: 0.01,  # bicycle: basically irrelevant
-            2: 0.04,  # car
-            3: 0.04,  # motorcycle
-            5: 0.06,  # bus
-            7: 0.06   # truck
+        self.class_k = {
+            0: 1.6,   # person → rises much faster
+            1: 0.6,   # bicycle → slow rise
+            2: 1.0,   # car → normal
+            3: 1.0,   # motorcycle
+            5: 1.4,   # bus → bigger = more contextual threat
+            7: 1.4,   # truck
         }
-
-
         # Max score scaling target
         self.max_score = 100.0
 
@@ -55,7 +51,6 @@ class TrackingDetectionService:
             return 0.0, tracked
 
         scores = []
-        base_class_scores = []
         now = time.time()
 
         for i in range(len(tracked)):
@@ -74,16 +69,16 @@ class TrackingDetectionService:
             duration = now - self.first_seen[track_id]
 
             # A) Baseline score (smooth growth)
-            baseline = (
-                self.sigmoid(area_ratio, 50) +
-                self.sigmoid(duration, 30)
-            )
-            base_class_scores.append(self.class_to_score.get(cls_id, 0.0) * conf)
+            k_factor = self.class_k.get(cls_id, 1.0)
+
+            area_score = self.sigmoid(area_ratio, midpoint=25, k=0.12 * k_factor, max_value=60)
+            time_score = self.sigmoid(duration, midpoint=4,   k=0.08 * k_factor, max_value=40)
+
+            baseline = area_score + time_score
             scores.append(baseline)
 
         self._cleanup_lost_tracks()
-        class_influence = np.mean(base_class_scores) * 50
-        final_score = min(np.mean(scores) + class_influence, self.max_score)
+        final_score = min(np.mean(scores), self.max_score)
         return final_score, tracked
 
 
@@ -94,6 +89,5 @@ class TrackingDetectionService:
             self.first_seen.pop(tid, None)
             self.last_seen.pop(tid, None)
 
-    def sigmoid(self, x, scale, max=0):
-        scaled_coefficient = (.2*scale)/scale
-        return scale / (1+math.exp(-(x-(max/2))*scaled_coefficient))
+    def sigmoid(self, x, midpoint, k=0.12, max_value=100.0):
+        return max_value / (1 + math.exp(-k * (x - midpoint)))
