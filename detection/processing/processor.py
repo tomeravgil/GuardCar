@@ -2,6 +2,7 @@ import cv2
 import pybreaker
 import time
 import logging
+from detection.processing.backoff_listener import ExponentialBackoffListener
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,6 +21,11 @@ class Processor:
             fail_max=3,
             reset_timeout=5
         )
+        self.circuit_breaker.add_listener(ExponentialBackoffListener(
+            base_timeout=5,
+            factor=2.0,
+            max_timeout=120
+        ))
 
         # YOLO class -> id map
         self.class_map = self.yolo_detection_service.get_classes()
@@ -67,8 +73,7 @@ class Processor:
                         })
                 except pybreaker.CircuitBreakerError:
                     # RF timed out so fallback to YOLO
-                    logger.warning("RF-DETR timed out, falling back to YOLO")
-                    detections = self.yolo_detection_service.detect(frame_bytes)
+                    detections = self.yolo_detection_service.detect(resized)
                 except Exception as e:
                     # RF crashed so fallback to YOLO safely
                     logger.error(f"RF-DETR error: {e}, falling back to YOLO")

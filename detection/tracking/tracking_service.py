@@ -73,12 +73,14 @@ class TrackingDetectionService:
 
             area_score = self.sigmoid(area_ratio, midpoint=25, k=0.12 * k_factor, max_value=60)
             time_score = self.sigmoid(duration, midpoint=4,   k=0.08 * k_factor, max_value=40)
-
             baseline = area_score + time_score
             scores.append(baseline)
 
         self._cleanup_lost_tracks()
-        final_score = min(np.mean(scores), self.max_score)
+        scores_arr = np.array(scores)
+        weights = np.exp(scores_arr)  # softmax-like emphasis
+        final_score = min(np.sum(weights * scores_arr) / np.sum(weights), self.max_score)
+
         return final_score, tracked
 
 
