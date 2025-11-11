@@ -1,31 +1,20 @@
-FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04
+FROM nvcr.io/nvidia/tensorrt:25.10-py3
 
-# System dependencies
-# Install Python 3.11 and system deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.11 python3.11-dev python3.11-distutils \
-    git libgl1 libglib2.0-0 libsm6 libxext6 curl \
+    libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 \
  && rm -rf /var/lib/apt/lists/*
 
-# Install pip for Python 3.11
-RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
 
-# Make python3 point to python3.11 (optional but recommended)
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 && \
-    update-alternatives --set python3 /usr/bin/python3.11
-
-# Upgrade pip
-RUN python3 -m pip install --upgrade pip
+# Optional: ensure python3.11 default (base uses 3.10 or 3.11 depending on tag)
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 || true
 
 WORKDIR /app
-COPY detection/model/rf_detr/ detection/model/rf_detr/
-COPY detection/model/detection_service.py detection/model/detection_service.py
-COPY detection/processing/ detection/processing/
-COPY rabbitMQ/ rabbitMQ/
-# PyTorch CUDA 12.1/12.2 wheels
-RUN pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu121
-# Install project Python deps
-RUN pip3 install --no-cache-dir -r rabbitMQ/rfdetr_consumer/requirements.txt
+
+COPY detection detection
+COPY rabbitMQ rabbitMQ
+
+# Install any Python deps your project needs
+RUN pip install --no-cache-dir -r rabbitMQ/rfdetr_consumer/requirements.txt
+RUN pip install onnxruntime-gpu
 
 CMD ["python3", "-m", "rabbitMQ.rfdetr_consumer.run_rfdetr_consumer"]
-
