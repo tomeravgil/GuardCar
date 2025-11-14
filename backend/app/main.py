@@ -1,5 +1,5 @@
 import asyncio
-from dependencies import init_dependencies
+from .dependencies import init_dependencies
 from core.services.sse.server_side_events import ServerSideEventsService
 from core.services.minio.minio_service import init_minio_bucket
 from fastapi import FastAPI
