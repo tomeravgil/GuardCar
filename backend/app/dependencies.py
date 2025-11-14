@@ -1,11 +1,11 @@
 import os
 import asyncio
-from core.use_cases.evaluate_suspicion import EvaluateSuspicionUseCase
-from api.schemas.thresholds import UIThresholds
-from core.services.suspicion.i_suspicion_service import ISuspicionService, SuspicionService
-from core.services.sse.i_server_side_events_service import IServerSideEventsService
-from core.use_cases.sse_connection import ServerSideEventsUseCase
-from core.services.sse.server_side_events import ServerSideEventsService
+from .api.schemas.thresholds import UIThresholds
+from .core.use_cases.evaluate_suspicion import EvaluateSuspicionUseCase
+from .core.services.suspicion.i_suspicion_service import ISuspicionService, SuspicionService
+from .core.services.sse.i_server_side_events_service import IServerSideEventsService
+from .core.use_cases.sse_connection import ServerSideEventsUseCase
+from .core.services.sse.server_side_events import ServerSideEventsService
 
 # NEW
 from core.services.mq.rabbit_consumer import RabbitMQConsumer  # <- add import
