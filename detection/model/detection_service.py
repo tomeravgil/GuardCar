@@ -17,7 +17,6 @@ class DetectionService(ABC):
         """Perform object detection on an image."""
         pass
 
-    @abstractmethod
     def get_classes(self):
         """Get the classes name to id"""
-        pass
+        return None
