@@ -51,7 +51,8 @@ class Processor:
 
                 # Resize feed for model inputs
                 resized = cv2.resize(frame, (640, 640))
-                frame_bytes = cv2.imencode('.jpg', resized)[1].tobytes()
+                gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
+                frame_bytes = cv2.imencode('.jpg', gray)[1].tobytes()
 
                 # Try Cloud Model first
                 try:
@@ -59,15 +60,20 @@ class Processor:
                         self.cloud_detection_service.detect,
                         frame_bytes
                     )
-
+                    for detection in cloud_result.detections:
+                        class_name = detection.class_name.lower()
+                        cls_id = self.class_map.get(class_name)
+                        if cls_id is None:
+                            continue
+                        detection.class_id = cls_id
                     # Convert Cloud Model → unified format
-                    detections = cloud_result.detections
+                    detections = cloud_result
                 except pybreaker.CircuitBreakerError:
                     # RF timed out so fallback to YOLO
                     detections = self.yolo_detection_service.detect(resized)
                 except Exception as e:
                     # RF crashed so fallback to YOLO safely
-                    logger.error(f"RF-DETR error: {e}, falling back to YOLO")
+                    logger.error(f"Cloud Model error: {e}, falling back to YOLO")
                     detections = self.yolo_detection_service.detect(resized)
 
                 # ---- Run Tracking (adds track_id internally) ----

@@ -95,7 +95,7 @@ class CloudModelProducer:
 
         start = time.time()
         while self.response is None:
-            self.connection.process_data_events(time_limit=0.1)
+            self.connection.process_data_events(time_limit=.5)
             if time.time() - start > timeout:
                 raise TimeoutError(f"{self.model_name} server did not respond in time.")
 
