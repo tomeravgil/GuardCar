@@ -21,15 +21,15 @@ class RFDETRDetectionService(DetectionService):
 
         The Processor expects DetectionResult(detections=[Detection...]).
         """
-        raw = self.model.infer(frame, confidence=0.5)[0]
+        inference_result = self.model.infer(frame, confidence=0.5)[0]
 
         detections = []
 
-        for pred in raw["predictions"]:
-            cx = pred["x"]
-            cy = pred["y"]
-            w  = pred["width"]
-            h  = pred["height"]
+        for pred in inference_result.predictions:
+            cx = pred.x
+            cy = pred.y
+            w  = pred.width
+            h  = pred.height
 
             # Convert from center-x, center-y, w, h → xyxy
             x1 = cx - w / 2
@@ -38,10 +38,9 @@ class RFDETRDetectionService(DetectionService):
             y2 = cy + h / 2
 
             det = Detection(
-                class_id   = pred["class_id"],
-                class_name = pred["class_name"].lower(),
-                confidence = float(pred["confidence"]),
-                bbox       = [float(x1), float(y1), float(x2), float(y2)],
+                class_name = pred.class_name,
+                confidence = float(pred.confidence),
+                bbox       = [x1, y1, x2, y2],
             )
 
             detections.append(det)

@@ -66,13 +66,13 @@ class CloudModelProducer:
 
         self.response = None
 
-        self.send_frame(frame_bytes=frame_bytes)
+        self._send_rpc_frame(frame_bytes=frame_bytes)
 
         self._receive_frame(timeout=timeout)
 
         return self.response
 
-    def _send_frame(self, frame_bytes):
+    def _send_rpc_frame(self, frame_bytes):
         """
         Internal helper to send the frame
         """
