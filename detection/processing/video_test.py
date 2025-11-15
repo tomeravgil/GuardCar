@@ -2,6 +2,7 @@ from detection.processing.adapters.cloud_model_adapter import CloudModelAdapter
 from detection.processing.processors.processor import Processor
 from detection.model.yolo.yolo_detection import YOLODetectionService
 from detection.model.cloud_model.producer.cloud_model_producer import CloudModelProducer
+from detection.processing.processors.test_processor import VideoTestProcessor
 from detection.tracking.tracking_service import TrackingDetectionService
 import logging
 
@@ -31,13 +32,18 @@ def main():
 
     tracking_service = TrackingDetectionService()
 
-    processor = Processor(
+    processor = VideoTestProcessor(
         local_detection_service=yolo_detection_service,
         cloud_detection_service=rf_detection_service,
         tracking_service=tracking_service
     )
 
-    processor.start_video_processing()
+    videos = [
+        "/Users/tomeravgil/Downloads/videos/IMG_0269.mp4",
+        "/Users/tomeravgil/Downloads/videos/IMG_0270.mp4",
+        "/Users/tomeravgil/Downloads/videos/IMG_0271.mp4"
+    ]
+    processor.start_video_processing(video_paths=videos)
 
 
 if __name__ == "__main__":
