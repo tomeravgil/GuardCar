@@ -38,6 +38,7 @@ class RFDETRDetectionService(DetectionService):
             y2 = cy + h / 2
 
             det = Detection(
+                class_id   = None,
                 class_name = pred.class_name,
                 confidence = float(pred.confidence),
                 bbox       = [x1, y1, x2, y2],
