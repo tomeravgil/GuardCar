@@ -1,4 +1,12 @@
-#!/usr/bin/env python3
+import os
+import sys
+import logging
+import argparse
+import pika
+from pathlib import Path
+from detection.model.cloud_model.consumer.cloud_model_consumer import CloudModelConsumer
+from detection.model.rf_detr.rf_detection import RFDETRDetectionService
+
 """
 RF-DETR Consumer Service
 
@@ -17,21 +25,11 @@ Example:
     export RABBITMQ_HOST=rabbit.example.com
     export RABBITMQ_USER=user
     export RABBITMQ_PASS=pass
-    python run_rfdetr_consumer.py
+    python run_cloud_consumer.py
 
     # Using command-line arguments
-    python run_rfdetr_consumer.py --host rabbit.example.com --user user --password pass
+    python run_cloud_consumer.py --host rabbit.example.com --user user --password pass
 """
-
-import os
-import sys
-import logging
-import argparse
-import pika
-from pathlib import Path
-from detection.model.rf_detr.rf_detr_consumer import RFDETRConsumer
-from detection.model.rf_detr.rf_detection import RFDETRDetectionService
-
 def parse_args():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description='Run RF-DETR Consumer Service')
@@ -65,18 +63,19 @@ def main():
     """Main function to run the RF-DETR consumer."""
     args = parse_args()
     logger = setup_logging(args.log_level)
-    
-    logger.info("Starting RF-DETR Consumer Service")
+    model_name = "rf-detr"
+    logger.info(f"Starting {model_name.upper()} Consumer Service")
     logger.info(f"Connecting to RabbitMQ at {args.host}:{args.port}{args.vhost} as {args.user}")
     try:
         detection_service = RFDETRDetectionService("rfdetr-nano")
         # Initialize and start consumer
-        consumer = RFDETRConsumer(
+        consumer = CloudModelConsumer(
             user=args.user,
             password=args.password,
             host=args.host,
             vhost=args.vhost,
-            rf_detection_service=detection_service
+            detection_service=detection_service,
+            model_name=model_name
         )
         
         # Connect to RabbitMQ
@@ -97,7 +96,7 @@ def main():
     finally:
         if 'consumer' in locals() and hasattr(consumer, 'connection') and consumer.connection.is_open:
             consumer.connection.close()
-        logger.info("RF-DETR Consumer Service stopped")
+        logger.info(f"{model_name.upper()} Consumer Service stopped")
 
 if __name__ == "__main__":
     main()

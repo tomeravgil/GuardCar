@@ -30,7 +30,6 @@ class TrackingDetectionService:
         # Max score scaling target
         self.max_score = 100.0
 
-
     def process_detections(self, detections, frame_shape):
         if not detections:
             self._cleanup_lost_tracks()
@@ -38,9 +37,9 @@ class TrackingDetectionService:
 
         H, W = frame_shape
 
-        xyxy = np.array([d["bbox"] for d in detections], dtype=float)
-        conf = np.array([d["conf"] for d in detections], dtype=float)
-        cls = np.array([d["cls_id"] for d in detections], dtype=int)
+        xyxy = np.array([d.bbox for d in detections], dtype=float)
+        conf = np.array([d.confidence for d in detections], dtype=float)
+        cls  = np.array([d.class_id for d in detections], dtype=int)
 
         det = Detections(xyxy=xyxy, confidence=conf, class_id=cls)
         tracked = self.tracker.update_with_detections(det)

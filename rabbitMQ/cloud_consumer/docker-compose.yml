@@ -19,11 +19,11 @@ services:
     networks:
       - guardcar-network
 
-  rfdetr-consumer:
-    container_name: rfdetr-consumer
+  cloud-consumer:
+    container_name: cloud-consumer
     build:
       context: ../..
-      dockerfile: rabbitMQ/rfdetr_consumer/Dockerfile.rfdetr-consumer
+      dockerfile: rabbitMQ/cloud_consumer/Dockerfile.cloud-consumer
     depends_on:
       rabbitmq:
         condition: service_healthy

@@ -11,10 +11,12 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+
+# TODO split this into demo and non demo
 class Processor:
-    def __init__(self, yolo_detection_service, rf_detection_service, tracking_service):
+    def __init__(self, yolo_detection_service, cloud_detection_service, tracking_service):
         self.yolo_detection_service = yolo_detection_service
-        self.rf_detection_service = rf_detection_service
+        self.cloud_detection_service = cloud_detection_service
         self.tracking_service = tracking_service
 
         self.circuit_breaker = pybreaker.CircuitBreaker(
@@ -51,26 +53,15 @@ class Processor:
                 resized = cv2.resize(frame, (640, 640))
                 frame_bytes = cv2.imencode('.jpg', resized)[1].tobytes()
 
-                # Try RF-DETR first
+                # Try Cloud Model first
                 try:
-                    rf_raw = self.circuit_breaker.call(
-                        self.rf_detection_service.detect,
+                    cloud_result = self.circuit_breaker.call(
+                        self.cloud_detection_service.detect,
                         frame_bytes
                     )
 
-                    # Convert RF-DETR → unified format
-                    detections = []
-                    for det in rf_raw:
-                        class_name = det["class"].lower()
-                        cls_id = self.class_map.get(class_name)
-                        if cls_id is None:
-                            continue
-
-                        detections.append({
-                            "bbox": det["bbox"],
-                            "cls_id": cls_id,
-                            "conf": float(det["confidence"])
-                        })
+                    # Convert Cloud Model → unified format
+                    detections = cloud_result.detections
                 except pybreaker.CircuitBreakerError:
                     # RF timed out so fallback to YOLO
                     detections = self.yolo_detection_service.detect(resized)
@@ -80,7 +71,7 @@ class Processor:
                     detections = self.yolo_detection_service.detect(resized)
 
                 # ---- Run Tracking (adds track_id internally) ----
-                score, tracked = self.tracking_service.process_detections(detections, resized.shape[:2])
+                score, tracked = self.tracking_service.process_detections(detections.detections, resized.shape[:2])
 
                 for i in range(len(tracked)):
                     x1, y1, x2, y2 = tracked.xyxy[i].astype(int)

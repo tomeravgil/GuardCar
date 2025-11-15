@@ -14,7 +14,7 @@ COPY detection detection
 COPY rabbitMQ rabbitMQ
 
 # Install any Python deps your project needs
-RUN pip install --no-cache-dir -r rabbitMQ/rfdetr_consumer/requirements.txt
+RUN pip install --no-cache-dir -r rabbitMQ/cloud_consumer/requirements.txt
 RUN pip install onnxruntime-gpu
 
-CMD ["python3", "-m", "rabbitMQ.rfdetr_consumer.run_rfdetr_consumer"]
+CMD ["python3", "-m", "rabbitMQ.cloud_consumer.run_cloud_consumer"]
