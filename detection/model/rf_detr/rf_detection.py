@@ -6,14 +6,14 @@ import torch
 
 class RFDETRDetectionService(DetectionService):
     def __init__(self, model_path: str):
-        self.model = get_model(
-            model_path,
-            providers=["CUDAExecutionProvider", "CPUExecutionProvider"]
-        )
+        super().__init__(model_path)
 
     def load_model(self, model_path: Optional[str] = None):
         """Load a RFDETR model from the specified path."""
-        pass
+        return get_model(
+            model_path,
+            providers=["CUDAExecutionProvider", "CPUExecutionProvider"]
+        )
         
     def detect(self, frame) -> DetectionResult:
         """

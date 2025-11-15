@@ -2,3 +2,5 @@ ultralytics
 opencv-python
 rfdetr
 supervision
+pybreaker
+pika
