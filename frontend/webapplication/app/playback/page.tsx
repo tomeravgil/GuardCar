@@ -4,9 +4,6 @@ import Sidebar from "../components/sidebar";
 import { useRouter } from "next/navigation";
 
 
-// Functionality:
-// Displays up to 20 videos per page with Next / Previous butons for more videos
-// each videos has controls to play/pause, fullscreen volume.
 export default function PlaybackPage() {
 
 	//Check Logged In
@@ -43,11 +40,11 @@ export default function PlaybackPage() {
 
 
     // Structure:
-	// left side nave bar full length of screen
-	// main content area centered
-		// video player container with black background, rounded corners
+	// left side nav bar full length of screen, width 48
+	// main content area full length of screen, fill rest width
+		// div to hold all video players of fetched videos
 			// 20 videos per page in grid
-		// buttons to navigate pages if more then 20 videos
+		// buttons to navigate pages if more than 20 videos
 	return (
 		<div className="flex min-h-screen bg-gray-50">
 			<Sidebar />
