@@ -49,12 +49,12 @@ def ask_for_ip() -> str:
     ip = input("Enter the IP address of your cloud model: ").strip()
 
     if not ip:
-        logger.error("No IP provided. Exiting.")
-        sys.exit(1)
+        logger.error("No IP provided.")
+        return None
 
     if not is_valid_ipv4(ip):
         logger.error(f"Invalid IP address: {ip}")
-        sys.exit(1)
+        return None
 
     return ip
 
@@ -73,16 +73,19 @@ def main():
 
     # Try Cloud producer
     try:
-        cloud_producer = CloudModelProducer(
-            user="guardcar",
-            password="guardcar",
-            host=cloud_ip,
-            vhost="/",
-            model_name="rf-detr"
-        )
+        if cloud_ip is None:
+            cloud_producer = None
+        else:
+            cloud_producer = CloudModelProducer(
+                user="guardcar",
+                password="guardcar",
+                host=cloud_ip,
+                vhost="/",
+                model_name="rf-detr"
+            )
     except Exception as e:
         logger.error(f"Failed to initialize RF-DETR producer: {e}")
-        sys.exit(1)
+        cloud_producer = None
 
     rf_detection_service = CloudModelAdapter(cloud_producer)
 
