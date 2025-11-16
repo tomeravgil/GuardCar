@@ -38,6 +38,8 @@ This project provides a flexible framework for object detection and tracking, su
 3. Download required model weights (YOLO weights are downloaded automatically if not present)
 
 ### Usage
+When running the demo or video test, you will be prompted to enter the IP address of your cloud model. The IP address should be the IP address of the machine running the cloud model. It is recommended that if you are running the cloud model on a different network, you will need to port forward your ip or use a VPN. Safety like TLS is not implemented yet.
+
 Pick the entrypoint that matches your workflow:
 
 ```bash

@@ -21,7 +21,7 @@ def main():
         cloud_producer = CloudModelProducer(
             user="tomer",
             password="yourpassword",
-            host="192.168.1.68",
+            host="YOUR_IP",
             vhost="/",
             model_name="rf-detr"
         )
