@@ -1,0 +1,59 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: guardcar-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_DEFAULT_VHOST:-/}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./rabbitmq/init:/docker-entrypoint-init.d 
+    networks:
+      - guardcar-network
+
+  cloud-consumer:
+    container_name: cloud-consumer
+    build:
+      context: ../..
+      dockerfile: rabbitMQ/cloud_consumer/Dockerfile.cloud-consumer
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - ONNXRUNTIME_EXECUTION_PROVIDERS=TensorrtExecutionProvider,CUDAExecutionProvider,CPUExecutionProvider
+      - TENSORRT_CACHE_PATH=/trt_cache
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_VHOST=${RABBITMQ_DEFAULT_VHOST:-/}
+      - RABBITMQ_USER=${RABBITMQ_DEFAULT_USER:-guest}
+      - RABBITMQ_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ../../detection:/app/detection
+      - ~/guardcar_trt_cache:/trt_cache
+    networks:
+      - guardcar-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+networks:
+  guardcar-network:
+    driver: bridge
+
