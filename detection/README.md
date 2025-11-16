@@ -42,7 +42,7 @@ Pick the entrypoint that matches your workflow:
 
 ```bash
 # Live/demo pipeline with webcam or RTSP
-python -m detection.processing.main
+python -m detection.processing.demo
 
 # Offline evaluation against recorded videos
 python -m detection.processing.video_test

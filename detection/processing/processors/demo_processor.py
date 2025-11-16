@@ -17,7 +17,7 @@ class DemoProcessor(Processor):
     """
 
     def __init__(self, local_detection_service: DetectionService, cloud_detection_service, tracking_service):
-        super.__init__(local_detection_service,cloud_detection_service,tracking_service)
+        super().__init__(local_detection_service,cloud_detection_service,tracking_service)
 
     def start_video_processing(self):
         cap = cv2.VideoCapture(0)

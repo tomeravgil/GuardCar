@@ -7,7 +7,7 @@ from supervision.detection.core import Detections
 
 class TrackingDetectionService:
     def __init__(self):
-        # ByteTrack tuned for webcam tracking stability
+        # ByteTrack tuned for tracking stability
         self.tracker = ByteTrack(
             lost_track_buffer=30,
             frame_rate=30,
