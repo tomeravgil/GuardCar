@@ -3,14 +3,13 @@ from core.services.sse.events.events_impl import SSEEventImpl
 
 class SSEEventFactory:
     EVENT_MAP = {
-        "event": SSEEventImpl,
-        "suspicion_detected": SSEEventImpl,
-        "clear": SSEEventImpl,
-        "warning": SSEEventImpl,
-        "info": SSEEventImpl,
-        "error": SSEEventImpl,
-        "multi_test": SSEEventImpl,
-        "test_event": SSEEventImpl,
+        "suspicion_detected": SuspicionDetected,
+        "clear": ClearEvent,
+        "warning": WarningEvent,
+        "info": InfoEvent,
+        "error": ErrorEvent,
+        "multi_test": MultiTestEvent,
+        "test_event": TestEvent
     }
 
     @classmethod
