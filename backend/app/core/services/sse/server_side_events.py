@@ -1,6 +1,6 @@
 import asyncio
-from core.services.sse.events.event_factory import SSEEventFactory
-from core.services.sse.i_server_side_events_service import IServerSideEventsService
+from app.core.services.sse.events.event_factory import SSEEventFactory
+from app.core.services.sse.i_server_side_events_service import IServerSideEventsService
 
 
 class ServerSideEventsService(IServerSideEventsService):

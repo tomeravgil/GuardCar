@@ -1,9 +1,10 @@
-from core.use_cases.evaluate_suspicion import EvaluateSuspicionUseCase
-from api.schemas.thresholds import UIThresholds
-from core.services.suspicion.i_suspicion_service import ISuspicionService, SuspicionService
-from core.services.sse.i_server_side_events_service import IServerSideEventsService
-from core.use_cases.sse_connection import ServerSideEventsUseCase
-from core.services.sse.server_side_events import ServerSideEventsService
+from app.core.use_cases.evaluate_suspicion import EvaluateSuspicionUseCase
+from app.api.schemas.thresholds import UIThresholds
+from app.core.services.suspicion.i_suspicion_service import ISuspicionService, SuspicionService
+from app.core.services.sse.i_server_side_events_service import IServerSideEventsService
+from app.core.use_cases.sse_connection import ServerSideEventsUseCase
+from app.core.services.sse.server_side_events import ServerSideEventsService
+
 
 ui_thresholds = UIThresholds(suspicion_score_threshold=70)
 _suspicion_service = SuspicionService()

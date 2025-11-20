@@ -46,47 +46,41 @@ docker run -d \
     -e "MINIO_ROOT_USER=${MINIO_ROOT_USER}" \
     -e "MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}" \
     --restart unless-stopped \
-    --health-cmd "mc ready local" \
-    --health-interval=10s \
-    --health-timeout=5s \
-    --health-retries=3 \
     "$IMAGE_NAME" server /data --console-address ":${CONSOLE_PORT}"
 
-# --- 4. Wait for Container to be Healthy ---
-echo "Waiting for MinIO to be healthy (this may take a few seconds)..."
-# Loop until the container's health status is "healthy"
-timeout=60 # 60 second timeout
+# --- 4. Wait for MinIO to be Ready ---
+echo "Waiting for MinIO to be ready (this may take a few seconds)..."
+timeout=60
 start_time=$(date +%s)
 
-while [ "$(docker inspect --format '{{.State.Health.Status}}' "$CONTAINER_NAME")" != "healthy" ]; do
+while true; do
     current_time=$(date +%s)
     elapsed=$((current_time - start_time))
 
     if [ $elapsed -ge $timeout ]; then
-        echo "Error: MinIO container failed to become healthy after ${timeout} seconds."
+        echo "Error: MinIO failed to start after ${timeout} seconds."
         echo "--- Container Logs ---"
         docker logs "$CONTAINER_NAME"
         exit 1
     fi
 
-    # Check if the container has exited unexpectedly
-    if [ "$(docker inspect --format '{{.State.Status}}' "$CONTAINER_NAME")" == "exited" ]; then
-         echo "Error: MinIO container exited unexpectedly."
-         echo "--- Container Logs ---"
-         docker logs "$CONTAINER_NAME"
-         exit 1
+    # Check if MinIO is responding
+    if curl -s http://localhost:${API_PORT}/minio/health/live > /dev/null 2>&1; then
+        echo " MinIO is up and healthy!"
+        break
     fi
 
     echo -n "."
     sleep 2
 done
 
-echo " MinIO is up and healthy!"
+# --- 5. Configure MinIO Client (mc) ---
+echo "Configuring MinIO client..."
+docker exec "$CONTAINER_NAME" mc alias set local http://localhost:${API_PORT} ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD}
 
-# --- 5. Create Buckets ---
+# --- 6. Create Buckets ---
 echo "Creating buckets..."
 for bucket in "${BUCKETS_TO_CREATE[@]}"; do
-    # We use 'mc ls' to check if the bucket exists. If the command fails, the bucket doesn't exist.
     if docker exec "$CONTAINER_NAME" mc ls "local/$bucket" >/dev/null 2>&1; then
         echo " - Bucket '$bucket' already exists. Skipping."
     else
@@ -96,7 +90,7 @@ for bucket in "${BUCKETS_TO_CREATE[@]}"; do
     fi
 done
 
-# --- 6. Final Summary ---
+# --- 7. Final Summary ---
 echo ""
 echo "--------------------------------------------------"
 echo "✅ MinIO Setup Complete!"

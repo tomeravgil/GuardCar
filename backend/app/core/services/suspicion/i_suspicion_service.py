@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from core.entities.suspicion import SuspicionLevel
+from app.core.entities.suspicion import SuspicionLevel
 class ISuspicionService:
 
     @abstractmethod

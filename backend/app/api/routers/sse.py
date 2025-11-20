@@ -1,6 +1,6 @@
-from core.use_cases.sse_connection import ServerSideEventsUseCase
+from app.core.use_cases.sse_connection import ServerSideEventsUseCase
 from fastapi import APIRouter, Depends
-from dependencies import get_sse_use_case
+from app.dependencies import get_sse_use_case
 
 router = APIRouter(prefix="/api")
 

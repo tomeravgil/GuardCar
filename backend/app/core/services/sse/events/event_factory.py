@@ -1,4 +1,4 @@
-from core.services.sse.events.events_impl import SSEEventImpl
+from app.core.services.sse.events.events_impl import SSEEventImpl
 
 
 class SSEEventFactory:

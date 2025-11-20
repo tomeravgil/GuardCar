@@ -1,0 +1,27 @@
+version: '3.8'
+services:
+  sender:
+    build: .
+    container_name: guardcar-sender
+    privileged: true  # Required for camera access
+    devices:
+      - /dev/video0:/dev/video0
+      - /dev/video1:/dev/video1
+    ports:
+      - "8443:8443"  # Streaming port
+      - "8080:8080"  # Control API port
+    volumes:
+      - ./recordings:/app/recordings
+    environment:
+      - HOST=0.0.0.0
+      - SERVER_PORT=8443
+      - FPS=30
+      - JPEG_QUALITY=90
+      - CERT_FILE=cert.pem
+      - KEY_FILE=key.pem
+      - MINIO_API_URL=http://192.168.1.100:8000
+      - CAMERA_ID=CAM001
+      - LOCATION=CAR
+      - RECORDING_DIR=/app/recordings
+      - CONTROL_API_PORT=8080
+    restart: unless-stopped

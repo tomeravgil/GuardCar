@@ -30,8 +30,8 @@ RUN pip install --no-cache-dir --upgrade pip \
  && pip install --no-cache-dir --break-system-packages -r requirements.txt
 
 # App
-COPY sender.py .env* ./
+COPY sender.py *.pem ./
 
-EXPOSE 8443
+EXPOSE 8443 8080
 # Use python3 to be explicit
 CMD ["python3", "sender.py"]
