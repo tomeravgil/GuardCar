@@ -59,13 +59,15 @@ export default function LivePage() {
                 <div className="flex flex-col items-center justify-start flex-1 bg-gray-100 py-10">
                     
                     {/* Main Live Stream Player */}
-                    <div className="relative w-[1200px] h-[700px] bg-black rounded-2xl overflow-hidden shadow-lg flex items-center justify-center">
+                    <div className="relative w-full max-w-[1200px] aspect-video bg-black rounded-2xl overflow-hidden shadow-lg flex items-center justify-center">
                         <video
                             ref={videoRef}
                             src="https://www.w3schools.com/html/mov_bbb.mp4"
                             className="w-full h-full object-cover rounded-2xl"
                             controls
                             muted
+                            playsInline
+                            aria-label="Live stream video"
                             controlsList="nodownload"
                         />
                     </div>
@@ -75,22 +77,26 @@ export default function LivePage() {
                         Most Recent Videos
                     </h2>
 
-                    <div className="grid grid-cols-5 gap-6 w-[1200px]">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 w-full max-w-[1200px]">
                         {recentVideos.length === 0 ? (
-                            <p className="text-gray-600 col-span-5 text-center">
+                            <p className="text-gray-600 col-span-2 sm:col-span-3 md:col-span-4 lg:col-span-5 text-center">
                                 No videos found.
                             </p>
                         ) : (
-                            recentVideos.map((file, idx) => (
+                            recentVideos.map((file) => (
                                 <div
-                                    key={idx}
+                                    key={file}
                                     className="cursor-pointer flex flex-col items-center group"
                                 >
                                     <video
-                                        src={`/videos/${file}`}
+                                        src={`/videos/${encodeURIComponent(file)}`}
                                         className="rounded-lg shadow-md border border-gray-300 w-[160px] h-[90px] object-cover"
                                         controls
-                            			muted
+                                        muted
+                                        preload="metadata"
+                                        playsInline
+                                        aria-label={`Recent video ${file}`}
+                                        controlsList="nodownload"
                                     />
 
                                     <p className="text-center text-sm mt-2 text-gray-700 truncate w-full">
