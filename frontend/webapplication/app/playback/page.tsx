@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 export default function PlaybackPage() {
 
-	//Check Logged In
+	// Check Logged In
 	const router = useRouter();
 	useEffect(() => {
 		const isLoggedIn = sessionStorage.getItem("loggedIn");
@@ -15,25 +15,50 @@ export default function PlaybackPage() {
 		}
 	}, [router]);
 
-
-  	const [videoFiles, setVideoFiles] = useState<string[]>([]);
-  	const [page, setPage] = useState(0);
-  	const pageSize = 20;
-	
+	const [videoFiles, setVideoFiles] = useState<string[]>([]);
+	const [page, setPage] = useState(0);
+	const [isLoading, setIsLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+	const pageSize = 20;
 
 	// Fetch videos
 	useEffect(() => {
+		let mounted = true;
+		setIsLoading(true);
+		setError(null);
 		fetch("/api/videos")
-		.then((res) => res.json())
-		.then((data) => setVideoFiles(data))
-		.catch((err) => console.error("Failed to load videos:", err));
+		.then((res) => {
+			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			return res.json();
+		})
+		.then((data) => {
+			if (!mounted) return;
+			setVideoFiles(Array.isArray(data) ? data : []);
+		})
+		.catch((err) => {
+			console.error("Failed to load videos:", err);
+			if (mounted) setError(String(err));
+		})
+		.finally(() => mounted && setIsLoading(false));
+
+		return () => { mounted = false; };
 	}, []);
 
+	// Reset page if video list changes to avoid out-of-range page
+	useEffect(() => {
+		setPage(0);
+	}, [videoFiles.length]);
 
-	// Num of pages
-	const totalPages = Math.ceil(videoFiles.length / pageSize);
+	// Num of pages (ensure at least 1 for UI math)
+	const totalPages = Math.max(1, Math.ceil(videoFiles.length / pageSize));
 	const startIndex = page * pageSize;
 	const visibleVideos = videoFiles.slice(startIndex, startIndex + pageSize);
+
+	// Pause any playing videos when changing pages
+	useEffect(() => {
+		const videos = document.querySelectorAll<HTMLVideoElement>("#playback-grid video");
+		videos.forEach((v) => v.pause());
+	}, [page]);
 
 	const goNext = () => setPage((p) => Math.min(p + 1, totalPages - 1));
 	const goPrev = () => setPage((p) => Math.max(p - 1, 0));
@@ -55,20 +80,26 @@ export default function PlaybackPage() {
 				</header>
 			
 				<div className="flex flex-col flex-1 items-center p-8 overflow-y-auto">
-					<div className="bg-gray-800 p-6 rounded-3xl shadow-lg grid grid-cols-4 gap-6 max-h-[85vh] overflow-y-auto">
-						{visibleVideos.length === 0 ? (
+					<div id="playback-grid" className="bg-gray-800 p-6 rounded-3xl shadow-lg grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-h-[85vh] overflow-y-auto w-full">
+						{isLoading ? (
+							<p className="text-gray-300">Loading videos…</p>
+						) : error ? (
+							<p className="text-red-400">Failed to load videos: {error}</p>
+						) : visibleVideos.length === 0 ? (
 							<p className="text-gray-300">No videos found.</p>
 						) : (
-							visibleVideos.map((file, i) => (
+							visibleVideos.map((file) => (
 								<div
-									key={i}
+									key={file}
 									className="bg-black rounded-xl overflow-hidden relative hover:scale-[1.02] transition-transform duration-200"
 								>
 									<video
 										className="w-full h-40 object-cover"
 										controls
 										preload="metadata"
-										src={`/videos/${file}`}
+										src={`/videos/${encodeURIComponent(file)}`}
+										aria-label={`Video ${file}`}
+										playsInline
 									/>
 									<div className="absolute bottom-0 left-0 w-full bg-black/50 text-white text-sm px-2 py-1 truncate">
 										{file}
