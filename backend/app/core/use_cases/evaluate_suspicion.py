@@ -1,6 +1,6 @@
-from core.entities.suspicion import SuspicionLevel
-from core.services.suspicion.i_suspicion_service import ISuspicionService
-from core.services.sse.i_server_side_events_service import IServerSideEventsService
+from ..entities import SuspicionLevel
+from ..services.suspicion.i_suspicion_service import ISuspicionService
+from ..services.sse.i_server_side_events_service import IServerSideEventsService
 
 class EvaluateSuspicionUseCase:
     def __init__(self, 

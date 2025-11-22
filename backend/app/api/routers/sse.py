@@ -1,8 +1,7 @@
 # api/routers/sse.py
 from fastapi import APIRouter
 from starlette.responses import StreamingResponse
-from core.services.sse.server_side_events import ServerSideEventsService
-
+from backend.app.core.services.sse.server_side_events import ServerSideEventsService
 router = APIRouter(prefix="/sse", tags=["sse"])
 
 # This will be set during app bootstrap

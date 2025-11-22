@@ -6,9 +6,7 @@ from .core.services.suspicion.i_suspicion_service import ISuspicionService, Susp
 from .core.services.sse.i_server_side_events_service import IServerSideEventsService
 from .core.use_cases.sse_connection import ServerSideEventsUseCase
 from .core.services.sse.server_side_events import ServerSideEventsService
-
-# NEW
-from core.services.mq.rabbit_consumer import RabbitMQConsumer  # <- add import
+from .core.services.rabbitmqconsumer.rabbitmq_consumer import RabbitMQConsumer
 
 
 ui_thresholds = UIThresholds(suspicion_score_threshold=70)
@@ -25,7 +23,7 @@ def _env(name: str, default: str) -> str:
     return v if v else default
 
 
-def init_dependencies(shutdown_event: asyncio.Event):
+async def init_dependencies(shutdown_event: asyncio.Event):
     global _sse_service, _consumer
 
     # 1) SSE singleton bound to the same shutdown signal
@@ -65,7 +63,8 @@ def init_dependencies(shutdown_event: asyncio.Event):
         prefetch=32,
         shutdown_event=shutdown_event,
     )
-    _bg_tasks.append(asyncio.create_task(_consumer.run()))
+    task = asyncio.create_task(_consumer.run())
+    _bg_tasks.append(task)
 
 
 def get_suspicion_service() -> ISuspicionService:
