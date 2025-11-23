@@ -25,21 +25,28 @@ Dual-camera Raspberry Pi video streamer with on-demand recording and MinIO uploa
 
 2. Configure environment (see [Environment Variables](#environment-variables) below)
 
-### 🧪 Test Locally (Mock Mode)
+
+### Setup MinIO and Backend API:
+The sender requires a running backend API with MinIO storage.
+**Start MinIO:**
 ```bash
-cd VideoContainer/Sender
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-pip install opencv-python  # Only needed for mock mode
-python sender_mock.py
+cd backend/storage
+bash minio.sh
 ```
+
+### Install Dependencies and Run Backend API:
+```bash
+cd backend/app
+pip install -r requirements.txt
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+MINIO CONSOLE URL: http://localhost:9001
 
 ### Test the Control API:
 ```bash
-curl -X POST http://localhost:8080/start
+Invoke-WebRequest -Method POST -Uri http://localhost:8080/start
 curl http://localhost:8080/status
-curl -X POST http://localhost:8080/stop
+Invoke-WebRequest -Method POST -Uri http://localhost:8080/stop
 ```
 
 ### 🍓 Deploy on Raspberry Pi (Docker - Recommended)
@@ -78,10 +85,17 @@ KEY_FILE=key.pem
 MINIO_API_URL=http://192.168.1.100:8000  # Backend API endpoint
 CAMERA_ID=CAM001
 LOCATION=Right Mirror
-RECORDING_DIR=/app/recordings
+RECORDING_DIR=/app/recordings # Local storage need to be changed to file location if local
 CONTROL_API_PORT=8080
 ```
 
+Create `backend/app/core/services/minio/.env`
+```bash
+MINIO_ENDPOINT=localhost:9000
+MINIO_ACCESS_KEY=YourAccessKey
+MINIO_SECRET_KEY=YourSecretKey
+MINIO_BUCKET_NAME=videos
+```
 ---
 
 ## Control API Endpoints

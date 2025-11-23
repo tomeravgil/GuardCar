@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Body, Depends
-from app.api.schemas.yolo_input import YoloInput
-from app.api.schemas.responses import SuspicionResponse, VideoResponse
-from app.core.use_cases.evaluate_suspicion import EvaluateSuspicionUseCase
-from app.dependencies import get_suspicion_use_case
+from api.schemas.yolo_input import YoloInput
+from api.schemas.responses import SuspicionResponse, VideoResponse
+from core.use_cases.evaluate_suspicion import EvaluateSuspicionUseCase
+from dependencies import get_suspicion_use_case
 
 router = APIRouter(prefix="/api")
 

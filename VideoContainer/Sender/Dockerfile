@@ -29,8 +29,11 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip \
  && pip install --no-cache-dir --break-system-packages -r requirements.txt
 
-# App
-COPY sender.py *.pem ./
+# Copy only the Python script (certs will be mounted at runtime)
+COPY sender.py .
+
+# Create recordings directory
+RUN mkdir -p /app/recordings
 
 EXPOSE 8443 8080
 # Use python3 to be explicit

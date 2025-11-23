@@ -1,13 +1,13 @@
 import asyncio
-from app.dependencies import init_dependencies
-from app.core.services.sse.server_side_events import ServerSideEventsService
-from app.core.services.minio.minio_service import init_minio_bucket
+from dependencies import init_dependencies
+from core.services.sse.server_side_events import ServerSideEventsService
+from core.services.minio.minio_service import init_minio_bucket
 from fastapi import FastAPI
 from datetime import datetime
-from app.api.routers import suspicion
-from app.api.routers import sse
-from app.api.schemas.thresholds import UIThresholds
-from app.api.routers import videos
+from api.routers import suspicion
+from api.routers import sse
+from api.schemas.thresholds import UIThresholds
+from api.routers import videos
 
 app = FastAPI(title="GuardCar API")
 

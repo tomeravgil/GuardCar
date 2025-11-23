@@ -1,4 +1,4 @@
-from app.core.services.sse.events.events import SSEEvent
+from core.services.sse.events.events import SSEEvent
 
 
 class SSEEventImpl(SSEEvent):

@@ -1,6 +1,6 @@
 import asyncio
-from app.core.services.sse.events.event_factory import SSEEventFactory
-from app.core.services.sse.i_server_side_events_service import IServerSideEventsService
+from core.services.sse.events.event_factory import SSEEventFactory
+from core.services.sse.i_server_side_events_service import IServerSideEventsService
 
 
 class ServerSideEventsService(IServerSideEventsService):
@@ -43,5 +43,3 @@ class ServerSideEventsService(IServerSideEventsService):
             print("SSE stream cancelled (client disconnected or server shutting down).")
         finally:
             print("SSE stream exited cleanly.")
-
-        
