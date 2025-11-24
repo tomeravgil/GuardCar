@@ -2,9 +2,10 @@
 import { useState } from "react";
 import Sidebar from "../components/sidebar";
 
+
 export default function SettingsPage() {
 
-
+	// temp until api can fetch current settings
 	const [formData, setFormData] = useState({
 		user: "admin",
 		password: "1234",
@@ -15,6 +16,7 @@ export default function SettingsPage() {
 	});
 
 
+	// update form data
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const { name, value } = e.target;
 		
@@ -31,13 +33,11 @@ export default function SettingsPage() {
 	};
 
 
-	// To Connect to backend API
+	// To Connect to backend API (To Do)
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		
 		try {
-			
-			
 			// if (!request.ok){
 			// 	throw new Error("Request failed");
 			// }
@@ -50,6 +50,8 @@ export default function SettingsPage() {
 		}
 	};
 
+
+	
 	return (
 		<div className="flex min-h-screen bg-gray-50">
 			<Sidebar />

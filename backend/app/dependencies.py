@@ -5,6 +5,7 @@ from core.services.sse.i_server_side_events_service import IServerSideEventsServ
 from core.use_cases.sse_connection import ServerSideEventsUseCase
 from core.services.sse.server_side_events import ServerSideEventsService
 
+
 ui_thresholds = UIThresholds(suspicion_score_threshold=70)
 _suspicion_service = SuspicionService()
 _sse_service = None  # will be initialized later

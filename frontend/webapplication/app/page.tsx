@@ -24,7 +24,7 @@ export default function LoginPage() {
 		e.preventDefault();
 		if (username.trim() === process.env.NEXT_PUBLIC_LOGIN_USER && password.trim() === process.env.NEXT_PUBLIC_LOGIN_PASS) {
 			sessionStorage.setItem("loggedIn", "true");
-			router.push("/homepage");
+			router.push("/live");
 		} else {
 			alert("Invalid credentials");
 		}
