@@ -1,0 +1,20 @@
+FROM nvcr.io/nvidia/tensorrt:25.10-py3
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 \
+ && rm -rf /var/lib/apt/lists/*
+
+
+# Optional: ensure python3.11 default (base uses 3.10 or 3.11 depending on tag)
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 || true
+
+WORKDIR /app
+
+COPY detection detection
+COPY rabbitMQ rabbitMQ
+
+# Install any Python deps your project needs
+RUN pip install --no-cache-dir -r rabbitMQ/cloud_consumer/requirements.txt
+RUN pip install onnxruntime-gpu
+
+CMD ["python3", "-m", "rabbitMQ.cloud_consumer.run_cloud_consumer"]
