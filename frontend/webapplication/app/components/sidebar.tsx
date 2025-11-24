@@ -1,5 +1,5 @@
 "use client";
-import { Wifi, Video, Settings, House } from "lucide-react";
+import { Wifi, Video, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -16,9 +16,8 @@ export default function Sidebar() {
 
 
 // Structure:
-// left side nave bar full length of screen, width 48
-// white background, border right light gray
-// nav items stacked vertically, centered horizontally, gap 8
+// takes up one column, width 48, white background
+	// nav items stacked vertically, centered horizontally, gap 8
   	return (
     	<aside className="w-48 bg-white border-r border-gray-200 flex flex-col items-center py-10">
       		<nav className="flex flex-col items-start gap-8 text-lg font-medium text-gray-800">
@@ -30,12 +29,12 @@ export default function Sidebar() {
 							href={path}
 							className={`flex items-center gap-3 transition ${isActive ? "text-[#FF5A5F]" : "hover:text-[#FF5A5F]"}`}
             			>
-              			<Icon size={24} />
-              			<span>{name}</span>
+							<Icon size={24} />
+							<span>{name}</span>
             			</Link>
           			);
         		})}
       		</nav>
-   		 </aside>
+   		</aside>
   	);
 }
