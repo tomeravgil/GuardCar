@@ -1,13 +1,14 @@
-from detection.processing.adapters.cloud_model_adapter import CloudModelAdapter
-from detection.processing.processors.demo_processor import DemoProcessor
 from detection.model.yolo.yolo_detection import YOLODetectionService
-from detection.model.cloud_model.producer.cloud_model_producer import CloudModelProducer
 from detection.tracking.tracking_service import TrackingDetectionService
-import logging
 import os
 import requests
-import re
-import sys
+import cv2
+from detection.model.detection_service import DetectionService
+from detection.processing.processors.rpc_processor import RPCProcessor
+import time
+import logging
+import asyncio
+from gRPC.grpc_client import CloudClient
 
 logging.basicConfig(
     level=logging.INFO,
@@ -34,34 +35,74 @@ def ensure_yolo_model_exists(model_path: str):
     logger.info(f"YOLO model downloaded to {model_path}")
 
 
-def is_valid_ipv4(ip: str) -> bool:
-    """Return True if the string is a valid IPv4 address."""
-    pattern = r"^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$"
-    if not re.match(pattern, ip):
-        return False
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
 
-    parts = ip.split(".")
-    return all(0 <= int(p) <= 255 for p in parts)
+logger = logging.getLogger(__name__)
+
+class Demo:
+    """
+    Class to Demo the Cloud Detection Service and Local Detection Service working together.
+    """
+
+    def __init__(self, local_detection_service: DetectionService, cloud_detection_service, tracking_service):
+        self.processor = RPCProcessor(local_detection_service,cloud_detection_service,tracking_service)
+
+    async def start_video(self):
+        cap = cv2.VideoCapture(0)
+
+        if not cap.isOpened():
+            logger.error("Error: Could not open camera.")
+            return
+
+        logger.info("Starting video capture. Press 'q' to quit...")
+        prev_time = time.time()
+        frame_id = 0
+        try:
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+
+                # Resize feed for model inputs
+                resized = cv2.resize(frame, (640, 640))
+                score, tracked = await self.processor.process(resized_frame=resized, frame_id=frame_id)
+                for i in range(len(tracked)):
+                    x1, y1, x2, y2 = tracked.xyxy[i].astype(int)
+                    cls_id = int(tracked.class_id[i])
+                    track_id = int(tracked.tracker_id[i])
+
+                    cls_name = self.processor.get_classification(cls_id)
+
+                    cv2.rectangle(resized, (x1, y1), (x2, y2), (0,255,0), 2)
+                    cv2.putText(resized, f"{cls_name} #{track_id}",
+                                (x1, y1 - 8),
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                0.6, (0,255,0), 2)
+
+                # FPS
+                current_time = time.time()
+                fps = 1 / (current_time - prev_time)
+                prev_time = current_time
+                frame_id += 1
+                cv2.putText(resized, f"FPS: {fps:.1f} Score: {score:.2f}",
+                            (10, 30), cv2.FONT_HERSHEY_SIMPLEX,
+                            0.7, (0, 255, 255), 2)
+
+                cv2.imshow("Camera Feed", resized)
+
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+
+        finally:
+            cap.release()
+            cv2.destroyAllWindows()
+            logger.info("Video stream stopped and resources released.")
 
 
-def ask_for_ip() -> str:
-    """Ask the user for an IP address and validate it."""
-    ip = input("Enter the IP address of your cloud model: ").strip()
-
-    if not ip:
-        logger.error("No IP provided.")
-        return None
-
-    if not is_valid_ipv4(ip):
-        logger.error(f"Invalid IP address: {ip}")
-        return None
-
-    return ip
-
-
-def main():
-    # Ask user for cloud IP
-    cloud_ip = ask_for_ip()
+async def main():
 
     model_path = "yolo11n.pt"
 
@@ -71,34 +112,35 @@ def main():
     # Load YOLO
     yolo_detection_service = YOLODetectionService(model_path=model_path)
 
+    cert_path = "gRPC/server.crt"
+    server = "localhost:50051"
     # Try Cloud producer
     try:
-        if cloud_ip is None:
-            cloud_producer = None
-        else:
-            cloud_producer = CloudModelProducer(
-                user="guardcar",
-                password="guardcar",
-                host=cloud_ip,
-                vhost="/",
-                model_name="rf-detr"
-            )
+        cloud_producer = CloudClient(server, cert_path)
     except Exception as e:
-        logger.error(f"Failed to initialize RF-DETR producer: {e}")
+        logger.error(f"Failed to initialize cloud producer: {e}")
         cloud_producer = None
-
-    rf_detection_service = CloudModelAdapter(cloud_producer)
 
     tracking_service = TrackingDetectionService()
 
-    processor = DemoProcessor(
-        local_detection_service=yolo_detection_service,
-        cloud_detection_service=rf_detection_service,
-        tracking_service=tracking_service
+    processor = Demo(
+    local_detection_service=yolo_detection_service,
+    cloud_detection_service=cloud_producer,
+    tracking_service=tracking_service
     )
 
-    processor.start_video_processing()
+    if cloud_producer is not None:
+        asyncio.create_task(cloud_producer.start())
+        logger.info("Waiting for gRPC connection...")
+        try:
+            await asyncio.wait_for(cloud_producer.connected.wait(), timeout=5.0)
+            logger.info("gRPC connected!")
+        except asyncio.TimeoutError:
+            logger.warning("gRPC connection timed out. Proceeding, but cloud features may be unavailable.")
+
+    await processor.start_video()
+
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

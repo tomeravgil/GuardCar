@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from detection.dto.detection_types import DetectionResult
+from gRPC.CloudRoute_pb2 import DetectionResult
 
 class DetectionService(ABC):
     def __init__(self, model_path: str):

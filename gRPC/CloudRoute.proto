@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+// CloudRoute service provides both unary and streaming RPC methods
+// for sending frames from the Raspberry Pi to the cloud model and
+// receiving detection results (bounding boxes, classes, confidence).
+service CloudRoute {
+
+    // Unary RPC:
+    // Sends a single frame and returns a single detection result.
+    // Useful for testing, debugging, or low-frequency inference.
+    rpc CloudRoute (DetectionRequest) returns (DetectionResult);
+
+    // Bidirectional Streaming RPC:
+    // Allows the Pi to continuously stream frames to the cloud,
+    // while the cloud streams back detection results in real time.
+    // This is the main method used by the GuardCar pipeline.
+    rpc CloudRouteStream (stream DetectionRequest) returns (stream DetectionResult);
+}
+
+// Request message containing a single frame to be processed.
+message DetectionRequest {
+    // Raw encoded image bytes (JPEG or PNG recommended).
+    bytes frame = 1;
+
+    // Original image width.
+    int32 width = 2;
+
+    // Original image height.
+    int32 height = 3;
+
+    // Unique ID assigned by the Pi so the cloud can
+    // match detection results to the correct frame.
+    int32 frame_id = 4;
+}
+
+// Response message containing detections for a frame.
+message DetectionResult {
+    // List of detected objects in the frame.
+    repeated Detection detections = 1;
+
+    // The frame ID from the request, used to pair results back to frames.
+    int32 frame_id = 2;
+}
+
+// Represents a single detected object in the frame.
+message Detection {
+    // Integer class ID (model-dependent).
+    int32 class_id = 1;
+
+    // Human-readable class name.
+    string class_name = 2;
+
+    // Confidence score from the model (0.0 to 1.0).
+    float confidence = 3;
+
+    // Bounding box coordinates in pixel space:
+    // (x1, y1) = top-left corner
+    // (x2, y2) = bottom-right corner
+    float x1 = 4;
+    float y1 = 5;
+    float x2 = 6;
+    float y2 = 7;
+}
