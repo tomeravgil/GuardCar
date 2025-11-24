@@ -43,5 +43,3 @@ class ServerSideEventsService(IServerSideEventsService):
             print("SSE stream cancelled (client disconnected or server shutting down).")
         finally:
             print("SSE stream exited cleanly.")
-
-        

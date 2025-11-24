@@ -1,0 +1,27 @@
+version: '3.8'
+services:
+  sender:
+    build: .
+    container_name: guardcar-sender
+    privileged: true 
+    network_mode: host  
+    devices:
+      - /dev/video0:/dev/video0
+      - /dev/video1:/dev/video1
+    volumes:
+      - ./recordings:/app/recordings
+      - ./cert.pem:/app/cert.pem:ro
+      - ./key.pem:/app/key.pem:ro
+    environment:
+      - HOST=0.0.0.0
+      - SERVER_PORT=8443
+      - FPS=30
+      - JPEG_QUALITY=90
+      - CERT_FILE=/app/cert.pem
+      - KEY_FILE=/app/key.pem
+      - MINIO_API_URL=http://localhost:8000  
+      - CAMERA_ID=CAM001
+      - LOCATION=Right Mirror
+      - RECORDING_DIR=/app/recordings
+      - CONTROL_API_PORT=8080
+    restart: unless-stopped

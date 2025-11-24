@@ -92,3 +92,13 @@ dmypy.json
 *.log
 .DS_Store
 frontend/.DS_Store
+
+# --- Test Videos ---
+VideoContainer/Sender/recordings/*.mp4
+
+.env
+.env.*
+!.env.example
+!rabbitMQ/.env
+VideoContainer/**/.env
+backend/**/.env
