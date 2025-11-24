@@ -10,15 +10,11 @@ services:
       - /dev/video1:/dev/video1
     volumes:
       - ./recordings:/app/recordings
-      - ./cert.pem:/app/cert.pem:ro
-      - ./key.pem:/app/key.pem:ro
     environment:
       - HOST=0.0.0.0
       - SERVER_PORT=8443
       - FPS=30
       - JPEG_QUALITY=90
-      - CERT_FILE=/app/cert.pem
-      - KEY_FILE=/app/key.pem
       - MINIO_API_URL=http://localhost:8000  
       - CAMERA_ID=CAM001
       - LOCATION=Right Mirror
