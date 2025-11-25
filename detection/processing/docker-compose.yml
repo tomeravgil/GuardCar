@@ -1,0 +1,33 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: guardcar-rabbitmq
+    ports:
+      - "5672:5672"       # AMQP
+      - "15672:15672"     # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+
+  detection-manager:
+    build:
+      context: ../../
+      dockerfile: detection/processing/Dockerfile
+    container_name: guardcar-detection-manager
+    depends_on:
+      - rabbitmq
+    environment:
+      AMQP_URL: amqp://guest:guest@rabbitmq:5672/
+      CLOUD_PROVIDER_CONFIG_QUEUE_NAME: CLOUD_PROVIDER_CONFIG_QUEUE
+      SUSPICION_CONFIG_QUEUE_NAME: SUSPICION_CONFIG_QUEUE
+      SUSPICION_FRAME_QUEUE_NAME: SUSPICION_FRAME_QUEUE
+      RECORDING_STATUS_QUEUE_NAME: RECORDING_STATUS_QUEUE
+      VIDEO_IP: 192.168.0.145    # your Pi
+      VIDEO_PORT: 8443
+    restart: unless-stopped
+
+volumes:
+  rabbitmq_data:

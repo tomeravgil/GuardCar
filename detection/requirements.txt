@@ -1,6 +1,6 @@
 ultralytics
 opencv-python
-rfdetr
+#rfdetr
 supervision
 pybreaker
 pika

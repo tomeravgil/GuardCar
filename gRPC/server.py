@@ -1,7 +1,7 @@
 import grpc
-from concurrent import futures
+import asyncio
+from grpc import aio
 from .CloudRoute_pb2_grpc import add_CloudRouteServicer_to_server
-from .CloudRoute_pb2 import DetectionRequest, DetectionResult
 from .cloud_route_service import CloudRouteService
 from detection.model.yolo.yolo_detection import YOLODetectionService
 
@@ -19,26 +19,33 @@ def load_server_credentials(cert_path, key_path):
     )
 
 
+async def serve():
+    print("🚀 Starting CloudRoute gRPC server (ASYNC)...")
 
-def serve():
-    print("🚀 Starting CloudRoute gRPC server...")
+    # ASYNC gRPC SERVER (REQUIRED FOR STREAMING)
+    server = aio.server()
 
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    # Load YOLO model
+    model = YOLODetectionService("yolo11n.pt")
 
-    model = YOLODetectionService("../yolo11n.pt")
-    add_CloudRouteServicer_to_server(CloudRouteService(cloud_model=model), server)
+    # Register service
+    add_CloudRouteServicer_to_server(
+        CloudRouteService(cloud_model=model),
+        server
+    )
 
+    # Load TLS
     creds = load_server_credentials("gRPC/server.crt", "gRPC/server.key")
     print("🔒 Loaded TLS certificate and key")
 
     port = server.add_secure_port("[::]:50051", creds)
     print(f"📡 gRPC server bound to port {port}")
 
-    server.start()
+    await server.start()
     print("✅ gRPC server started successfully")
 
-    server.wait_for_termination()
+    await server.wait_for_termination()
 
 
-if __name__ == '__main__':
-    serve()
+if __name__ == "__main__":
+    asyncio.run(serve())
