@@ -59,12 +59,20 @@ class RPCProcessor(Processor):
         except CircuitBreakerError:
             # Cloud died or breaker is open → fallback
             logger.warning(f"Cloud unavailable, falling back to Local Model")
-            await self.cloud_client.clear_queue()
+            future = asyncio.run_coroutine_threadsafe(
+                self.cloud_client.clear_queue(),
+                self.cloud_client.loop
+            )
+            await asyncio.wrap_future(future)
             detections = self.local_detection_service.detect(resized_frame)
         except Exception as e:
             # Unexpected cloud error → fallback
             logger.error(f"Unexpected Cloud Model error: {e}")
-            await self.cloud_client.clear_queue()
+            future = asyncio.run_coroutine_threadsafe(
+                self.cloud_client.clear_queue(),
+                self.cloud_client.loop
+            )
+            await asyncio.wrap_future(future)
             detections = self.local_detection_service.detect(resized_frame)
 
         # Run tracking
@@ -75,11 +83,30 @@ class RPCProcessor(Processor):
 
     @circuit(cls=CircuitBreaker, recovery_timeout=5)
     async def _cloud_result(self, resized_frame, frame_id):
-        await self.cloud_client.send_frame(resized_frame, frame_id)
-        return await self.cloud_client.get_processed_frame(frame_id=frame_id, timeout=1)
+        # Schedule send_frame on the main loop (where CloudClient lives)
+        future_send = asyncio.run_coroutine_threadsafe(
+            self.cloud_client.send_frame(resized_frame, frame_id),
+            self.cloud_client.loop
+        )
+        await asyncio.wrap_future(future_send)
+
+        # Schedule get_processed_frame on the main loop
+        future_get = asyncio.run_coroutine_threadsafe(
+            self.cloud_client.get_processed_frame(frame_id=frame_id, timeout=1),
+            self.cloud_client.loop
+        )
+        return await asyncio.wrap_future(future_get)
 
     async def _cloud_reconnect(self):
         try:
-            await asyncio.wait_for(self.cloud_client.connected.wait(), timeout=1.0)
+            future = asyncio.run_coroutine_threadsafe(
+                self.cloud_client.connected.wait(),
+                self.cloud_client.loop
+            )
+            # wait_for needs to wrap the future
+            await asyncio.wait_for(asyncio.wrap_future(future), timeout=1.0)
         except asyncio.TimeoutError:
             pass
+
+    async def stop(self):
+        await self.cloud_client.stop()

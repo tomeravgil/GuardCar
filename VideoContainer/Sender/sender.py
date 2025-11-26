@@ -1,9 +1,8 @@
-# sender.py
+# sender.py  (TLS REMOVED – plain TCP streaming)
 import sys
 import cv2
 from picamera2 import Picamera2
 import socket
-import ssl
 import time
 import struct
 import numpy as np
@@ -17,34 +16,40 @@ import requests
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
 
+# ================================
+# Load environment variables
+# ================================
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env", override=False)
 
-#   1. Configuration Class
+
+# ==========================================================
+# 1. Configuration Class  (TLS fields removed)
+# ==========================================================
 class Config:
     """Loads all configuration from environment variables."""
 
     def __init__(self):
         # Streaming settings
         self.HOST = os.getenv("HOST", "0.0.0.0")
-        self.SERVER_PORT = int(os.getenv("SERVER_PORT", 8443))
-        self.CERT_FILE = os.getenv("CERT_FILE", "cert.pem")
-        self.KEY_FILE = os.getenv("KEY_FILE", "key.pem")
+        self.SERVER_PORT = int(os.getenv("SERVER_PORT", 8443))  # You can change this port
         self.FPS = int(os.getenv("FPS", 30))
         self.JPEG_QUALITY = int(os.getenv("JPEG_QUALITY", 90))
         self.FRAME_INTERVAL = 1.0 / self.FPS
-        
+
         # Recording settings
         self.MINIO_API_URL = os.getenv("MINIO_API_URL", "http://192.168.1.100:8000")
         self.CAMERA_ID = os.getenv("CAMERA_ID", "CAM001")
         self.LOCATION = os.getenv("LOCATION", "Unknown Location")
         self.RECORDING_DIR = Path(os.getenv("RECORDING_DIR", "/app/recordings"))
         self.RECORDING_DIR.mkdir(exist_ok=True)
-        
-        # Control API settings
+
+        # Control API
         self.CONTROL_API_PORT = int(os.getenv("CONTROL_API_PORT", 8080))
 
 
-#   2. Camera Hardware Manager
+# ==========================================================
+# 2. Camera Manager
+# ==========================================================
 class CameraManager:
     """Manages Picamera2 at a fixed 640x480 and combines frames."""
 
@@ -53,9 +58,12 @@ class CameraManager:
             self.cam0 = Picamera2(0)
             self.cam1 = Picamera2(1)
 
-            # Create per‑camera video configs at 640x480
-            cfg0 = self.cam0.create_video_configuration(main={"size": (640, 480), "format": "RGB888"})
-            cfg1 = self.cam1.create_video_configuration(main={"size": (640, 480), "format": "RGB888"})
+            cfg0 = self.cam0.create_video_configuration(
+                main={"size": (640, 480), "format": "RGB888"}
+            )
+            cfg1 = self.cam1.create_video_configuration(
+                main={"size": (640, 480), "format": "RGB888"}
+            )
 
             self.cam0.configure(cfg0)
             self.cam1.configure(cfg1)
@@ -63,12 +71,13 @@ class CameraManager:
             self.cam0.start()
             self.cam1.start()
             print("Cameras initialized at 640x480.")
+
         except Exception as e:
             print(f"FATAL: Camera initialization failed: {e}")
             sys.exit(1)
 
     def get_combined_frame(self):
-        """Captures both frames, stacks them horizontally, then converts to BGR."""
+        """Captures both frames, stacks horizontally (1280x480), convert RGB → BGR."""
         f0 = self.cam0.capture_array()
         f1 = self.cam1.capture_array()
 
@@ -78,16 +87,17 @@ class CameraManager:
         return bgr_combined
 
     def close(self):
-        """Stops and closes camera resources."""
         print("Stopping cameras...")
         self.cam0.stop()
         self.cam1.stop()
 
 
-#   3. Video Recorder (Managed by Control API)
+# ==========================================================
+# 3. Video Recorder
+# ==========================================================
 class VideoRecorder:
     """Handles video recording and uploading to MinIO."""
-    
+
     def __init__(self, config):
         self.config = config
         self.is_recording = False
@@ -95,306 +105,253 @@ class VideoRecorder:
         self.current_filename = None
         self.recording_start_time = None
         self.frame_count = 0
-        
-        # Upload queue and worker
+
         self.upload_queue = queue.Queue()
         self.upload_thread = threading.Thread(target=self._upload_worker, daemon=True)
         self.upload_thread.start()
-        
+
         self.lock = threading.Lock()
-    
+
     def start_recording(self):
-        """Start recording to a new video file."""
         with self.lock:
             if self.is_recording:
                 print("Already recording!")
                 return False
-            
+
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            self.current_filename = self.config.RECORDING_DIR / f"video_{self.config.CAMERA_ID}_{timestamp}.mp4"
-            
-            # H.264 codec, 1280x480 (dual camera side-by-side)
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            self.video_writer = cv2.VideoWriter(
-                str(self.current_filename),
-                fourcc,
-                self.config.FPS,
-                (1280, 480)  # Combined width x height
+            self.current_filename = (
+                self.config.RECORDING_DIR / f"video_{self.config.CAMERA_ID}_{timestamp}.mp4"
             )
-            
+
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+            self.video_writer = cv2.VideoWriter(
+                str(self.current_filename), fourcc,
+                self.config.FPS, (1280, 480)
+            )
+
             self.is_recording = True
             self.recording_start_time = datetime.now()
             self.frame_count = 0
             print(f"🔴 Recording started: {self.current_filename}")
             return True
-    
+
     def write_frame(self, frame):
-        """Add frame to current recording (thread-safe)."""
         with self.lock:
             if self.is_recording and self.video_writer:
                 self.video_writer.write(frame)
                 self.frame_count += 1
-    
+
     def stop_recording(self):
-        """Stop recording and queue file for upload."""
         with self.lock:
             if not self.is_recording:
                 print("Not currently recording!")
                 return False
-            
+
             self.is_recording = False
             if self.video_writer:
                 self.video_writer.release()
+
                 duration = (datetime.now() - self.recording_start_time).total_seconds()
-                print(f"⏹️  Recording stopped: {self.current_filename}")
+                print(f"⏹️ Recording stopped: {self.current_filename}")
                 print(f"   Duration: {duration:.1f}s, Frames: {self.frame_count}")
-                
-                # Queue for upload
+
                 self.upload_queue.put(self.current_filename)
                 self.current_filename = None
                 return True
-    
+
     def get_status(self):
-        """Get current recording status."""
         with self.lock:
             if self.is_recording:
                 duration = (datetime.now() - self.recording_start_time).total_seconds()
                 return {
                     "recording": True,
-                    "filename": str(self.current_filename.name) if self.current_filename else None,
+                    "filename": str(self.current_filename.name),
                     "duration_seconds": round(duration, 1),
-                    "frames": self.frame_count
+                    "frames": self.frame_count,
                 }
             return {"recording": False}
-    
+
     def _upload_worker(self):
-        """Background thread that uploads completed videos."""
         while True:
             video_path = self.upload_queue.get()
-            if video_path is None:  # Poison pill
+            if video_path is None:
                 break
-            
+
             try:
                 self._upload_video(video_path)
             except Exception as e:
                 print(f"❌ Upload failed for {video_path}: {e}")
-            
+
             self.upload_queue.task_done()
-    
 
     def _upload_video(self, video_path):
-        """Upload video file to MinIO API."""
         print(f"📤 Uploading {video_path.name} to {self.config.MINIO_API_URL}...")
-        
+
         try:
-            with open(video_path, 'rb') as f:
-                files = {'file': (video_path.name, f, 'video/mp4')}
+            with open(video_path, "rb") as f:
+                files = {"file": (video_path.name, f, "video/mp4")}
                 data = {
-                    'title': f'Recording from {self.config.CAMERA_ID}',
-                    'camera_id': self.config.CAMERA_ID,
-                    'location': self.config.LOCATION,
-                    'description': f'Dual mirror camera recording (TEST)',
-                    'timestamp': datetime.now().isoformat()
+                    "title": f"Recording from {self.config.CAMERA_ID}",
+                    "camera_id": self.config.CAMERA_ID,
+                    "location": self.config.LOCATION,
+                    "description": "Dual mirror camera recording",
+                    "timestamp": datetime.now().isoformat(),
                 }
-                
+
                 response = requests.post(
                     f"{self.config.MINIO_API_URL}/api/videos/upload",
-                    files=files,
-                    data=data,
-                    timeout=300
+                    files=files, data=data, timeout=300
                 )
-            
-            # File is now closed - add small delay for Windows to release handle
+
             time.sleep(0.5)
-            
+
             if response.status_code == 201:
-                result = response.json()
-                print(f"✅ Uploaded successfully as {result['video_id']}")
-                
-                # Delete local file after successful upload
+                print(f"✅ Uploaded successfully")
                 try:
                     video_path.unlink()
-                    print(f"🗑️  Deleted local file: {video_path.name}")
-                except PermissionError:
-                    print(f"⚠️  Could not delete {video_path.name} (file in use - will retry)")
-                    # Optionally: implement retry logic here
+                    print(f"🗑️ Deleted local file: {video_path.name}")
+                except:
+                    print(f"⚠️ Could not delete {video_path.name}")
             else:
-                print(f"❌ Upload failed: {response.status_code} - {response.text}")
+                print(f"❌ Upload failed: {response.status_code} {response.text}")
+
         except Exception as e:
             print(f"❌ Upload error: {e}")
-    
+
     def close(self):
-        """Cleanup resources."""
         if self.is_recording:
             self.stop_recording()
-        
-        # Stop upload thread
+
         self.upload_queue.put(None)
         self.upload_thread.join()
 
 
-#   4. Control API Server (REST endpoints)
+# ==========================================================
+# 4. Control API (unchanged)
+# ==========================================================
 class ControlAPIHandler(BaseHTTPRequestHandler):
-    """HTTP handler for recording control."""
-    
     def log_message(self, format, *args):
-        """Override to customize logging."""
         print(f"[Control API] {format % args}")
-    
+
     def _set_headers(self, status=200):
         self.send_response(status)
-        self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header("Content-type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
-    
+
     def do_GET(self):
-        """Handle GET requests."""
-        if self.path == '/status':
-            # Get recording status
+        if self.path == "/status":
             status = self.server.recorder.get_status()
             self._set_headers(200)
             self.wfile.write(json.dumps(status).encode())
-        
-        elif self.path == '/health':
-            # Health check
+
+        elif self.path == "/health":
             self._set_headers(200)
             self.wfile.write(json.dumps({"status": "ok"}).encode())
-        
+
         else:
             self._set_headers(404)
             self.wfile.write(json.dumps({"error": "Not found"}).encode())
-    
+
     def do_POST(self):
-        """Handle POST requests."""
-        if self.path == '/start':
-            # Start recording
-            success = self.server.recorder.start_recording()
-            if success:
+        if self.path == "/start":
+            ok = self.server.recorder.start_recording()
+            if ok:
                 self._set_headers(200)
                 self.wfile.write(json.dumps({"message": "Recording started"}).encode())
             else:
                 self._set_headers(400)
                 self.wfile.write(json.dumps({"error": "Already recording"}).encode())
-        
-        elif self.path == '/stop':
-            # Stop recording
-            success = self.server.recorder.stop_recording()
-            if success:
+
+        elif self.path == "/stop":
+            ok = self.server.recorder.stop_recording()
+            if ok:
                 self._set_headers(200)
                 self.wfile.write(json.dumps({"message": "Recording stopped"}).encode())
             else:
                 self._set_headers(400)
                 self.wfile.write(json.dumps({"error": "Not recording"}).encode())
-        
+
         else:
             self._set_headers(404)
             self.wfile.write(json.dumps({"error": "Not found"}).encode())
 
 
 class ControlAPIServer(HTTPServer):
-    """Custom HTTP server that holds reference to recorder."""
-    
-    def __init__(self, server_address, RequestHandlerClass, recorder):
-        super().__init__(server_address, RequestHandlerClass)
+    def __init__(self, server_address, handler, recorder):
+        super().__init__(server_address, handler)
         self.recorder = recorder
 
 
-#   5. Main Stream Server (with integrated recording)
+# ==========================================================
+# 5. Stream Server (NO TLS)
+# ==========================================================
 class StreamServer:
-    """Handles networking, SSL, streaming frames, and recording."""
+    """Handles networking, streaming frames, and recording."""
 
     def __init__(self, config, camera_manager, recorder):
         self.config = config
         self.camera_manager = camera_manager
         self.recorder = recorder
-        self.context = self._create_tls_context()
         self.server_sock = self._create_server_socket()
         self.jpeg_params = [int(cv2.IMWRITE_JPEG_QUALITY), self.config.JPEG_QUALITY]
         self.running = True
 
-    def _create_tls_context(self):
-        """Create a TLS context with secure settings."""
-        print("Creating TLS context...")
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        try:
-            context.load_cert_chain(certfile=self.config.CERT_FILE, keyfile=self.config.KEY_FILE)
-            print("Loaded TLS cert/key")
-            return context
-        except Exception as e:
-            print(f"FATAL: Failed to load cert/key: {e}")
-            sys.exit(1)
-
     def _create_server_socket(self):
-        """Binds and listens on the server socket."""
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.settimeout(1.0)  # Allow periodic checks
+        sock.settimeout(1.0)
         try:
             sock.bind((self.config.HOST, self.config.SERVER_PORT))
             sock.listen(1)
-            print(f"📹 Stream server listening on {self.config.HOST}:{self.config.SERVER_PORT}")
+            print(f"📹 Stream server (NO TLS) listening on {self.config.HOST}:{self.config.SERVER_PORT}")
             return sock
         except Exception as e:
-            print(f"FATAL: Could not bind to port: {e}")
+            print(f"FATAL: Could not bind: {e}")
             sys.exit(1)
 
     def run(self):
-        """Main server loop to accept clients."""
         while self.running:
             try:
-                raw_connection, client_address = self.server_sock.accept()
-                print(f"Connection from {client_address}")
-                self._handle_client(raw_connection)
+                conn, addr = self.server_sock.accept()
+                print(f"Connection from {addr}")
+                self._handle_client(conn)
             except socket.timeout:
-                continue  # Check if still running
-            except Exception as e:
-                if self.running:
-                    print(f"Error accepting connection: {e}")
+                continue
 
-    def _handle_client(self, raw_connection):
-        """Manages the entire lifecycle of a single client connection."""
+    def _handle_client(self, conn):
         try:
-            with self.context.wrap_socket(raw_connection, server_side=True) as connection:
+            prev_time = time.time()
+
+            while self.running:
+                frame = self.camera_manager.get_combined_frame()
+                self.recorder.write_frame(frame)
+
+                ok, encoded = cv2.imencode(".jpg", frame, self.jpeg_params)
+                if not ok:
+                    continue
+
+                data = encoded.tobytes()
+                conn.sendall(struct.pack("!I", len(data)) + data)
+
+                elapsed = time.time() - prev_time
+                time.sleep(max(0.0, self.config.FRAME_INTERVAL - elapsed))
                 prev_time = time.time()
-                
-                while self.running:
-                    # 1. Get Frame
-                    frame = self.camera_manager.get_combined_frame()
-                    
-                    # 2. Record frame if recording is active
-                    self.recorder.write_frame(frame)
-                    
-                    # 3. Encode Frame for streaming
-                    encoded, buffer = cv2.imencode('.jpg', frame, self.jpeg_params)
-                    if not encoded:
-                        print("Failed to encode frame")
-                        continue
 
-                    # 4. Send Frame to client
-                    data = buffer.tobytes()
-                    connection.sendall(struct.pack("!I", len(data)) + data)
-
-                    # 5. Maintain FPS
-                    elapsed = time.time() - prev_time
-                    delay = max(0.0, self.config.FRAME_INTERVAL - elapsed)
-                    time.sleep(delay)
-                    prev_time = time.time()
-
-        except (socket.error, ssl.SSLError, struct.error) as e:
-            print(f"Client disconnected: {e}")
         except Exception as e:
-            print(f"An unexpected error occurred with client: {e}")
+            print(f"Client disconnected: {e}")
         finally:
-            raw_connection.close()
+            conn.close()
 
     def close(self):
-        """Closes the main server socket."""
         print("Closing stream server.")
         self.running = False
         self.server_sock.close()
 
 
-#  6. Main execution
+# ==========================================================
+# 6. Main Execution
+# ==========================================================
 if __name__ == "__main__":
     config = Config()
     cam_manager = None
@@ -402,33 +359,34 @@ if __name__ == "__main__":
     recorder = None
     control_api = None
     control_thread = None
-    
+
     try:
-        # Initialize components
         cam_manager = CameraManager()
         recorder = VideoRecorder(config)
         stream_server = StreamServer(config, cam_manager, recorder)
-        
-        # Start Control API in separate thread
+
         control_api = ControlAPIServer(
-            ('0.0.0.0', config.CONTROL_API_PORT),
+            ("0.0.0.0", config.CONTROL_API_PORT),
             ControlAPIHandler,
             recorder
         )
-        control_thread = threading.Thread(target=control_api.serve_forever, daemon=True)
+
+        control_thread = threading.Thread(
+            target=control_api.serve_forever, daemon=True
+        )
         control_thread.start()
-        print(f"🎛️  Control API listening on http://0.0.0.0:{config.CONTROL_API_PORT}")
-        print(f"   Endpoints:")
-        print(f"   - POST /start  - Start recording")
-        print(f"   - POST /stop   - Stop recording")
-        print(f"   - GET  /status - Get recording status")
-        print(f"   - GET  /health - Health check")
-        
-        # Start streaming server (blocking)
+
+        print(f"🎛️ Control API listening on http://0.0.0.0:{config.CONTROL_API_PORT}")
+        print(f"   - POST /start")
+        print(f"   - POST /stop")
+        print(f"   - GET  /status")
+        print(f"   - GET  /health")
+
         stream_server.run()
-        
+
     except KeyboardInterrupt:
-        print("\nCaught interrupt, shutting down...")
+        print("\nShutting down...")
+
     finally:
         if stream_server:
             stream_server.close()
@@ -438,4 +396,5 @@ if __name__ == "__main__":
             control_api.shutdown()
         if cam_manager:
             cam_manager.close()
+
         print("Sender exited cleanly.")

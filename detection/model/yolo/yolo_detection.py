@@ -25,7 +25,7 @@ class YOLODetectionService(DetectionService):
             return model
         except Exception as e:
             logger.error(f"Error loading YOLO model from {model_path}: {e}")
-            return None
+            raise e
         
     def get_classes(self):
         return {name.lower(): idx for idx, name in self.model.names.items()}

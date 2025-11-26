@@ -1,3 +1,4 @@
+import asyncio
 from gRPC.CloudRoute_pb2 import DetectionRequest, DetectionResult, Detection
 from gRPC.CloudRoute_pb2_grpc import CloudRouteServicer
 from detection.model.detection_service import DetectionService as InternalDetectionService
@@ -11,10 +12,19 @@ class CloudRouteService(CloudRouteServicer):
     def CloudRoute(self, request: DetectionRequest, context):
         return self.__convert_internal_dr_to_rpc_dr(self.cloud_model.detect(request.frame), request.frame_id)
 
-    def CloudRouteStream(self, request_iterator, context):
-        
-        for request in request_iterator:
-            yield self.__convert_internal_dr_to_rpc_dr(self.cloud_model.detect(request.frame), request.frame_id)
+    async def CloudRouteStream(self, request_iterator, context):
+        print("SERVER: Stream started")
+
+        async for request in request_iterator:
+            print(f"SERVER: Received frame {request.frame_id}")
+
+            loop = asyncio.get_running_loop()
+            internal = await loop.run_in_executor(None, self.cloud_model.detect, request.frame)
+            result = self.__convert_internal_dr_to_rpc_dr(internal, request.frame_id)
+
+            yield result
+
+            print(f"SERVER: Sent result for frame {request.frame_id}")
 
     def __convert_internal_dr_to_rpc_dr(self, detection_result: InternalDetectionResult, frame_id: int) -> DetectionResult:
         detections = []

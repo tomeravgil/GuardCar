@@ -92,3 +92,6 @@ class TrackingDetectionService:
 
     def sigmoid(self, x, midpoint, k=0.12, max_value=100.0):
         return max_value / (1 + math.exp(-k * (x - midpoint)))
+
+    def set_class_k(self, classes):
+        self.class_k = classes

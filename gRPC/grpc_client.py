@@ -4,33 +4,53 @@ from gRPC.CloudRoute_pb2_grpc import CloudRouteStub
 from gRPC.CloudRoute_pb2 import DetectionRequest
 import cv2
 import logging
+import base64
 logger = logging.getLogger(__name__)
+
+import re
+
+def normalize_address(addr: str) -> str:
+    # detect IPv6
+    if ":" in addr and addr.count(":") > 1:
+        if "[" not in addr:
+            host, port = addr.rsplit(":", 1)
+            return f"[{host}]:{port}"
+    return addr
 
 class GRPCClient:
     def __init__(self, server, cert_path):
-        self.server = server
-        self.credentials = self._load_tls_credentials(cert_path)
+        self.server = normalize_address(server)
+        der_bytes = base64.b64decode(cert_path)
+        pem = (
+                b"-----BEGIN CERTIFICATE-----\n" +
+                base64.encodebytes(der_bytes) +
+                b"-----END CERTIFICATE-----\n"
+        )
+        self.credentials = grpc.ssl_channel_credentials(root_certificates=pem)
         self.connected = asyncio.Event()
         self.channel = None
         self.stub = None
 
-    def _load_tls_credentials(self, cert):
-        with open(cert, "rb") as f:
-            trusted_cert = f.read()
-        return grpc.ssl_channel_credentials(root_certificates=trusted_cert)
-
-    def connect(self):
+    async def connect(self):
+        logger.info(f"Connecting to gRPC at {self.server}...")
         try:
             self.channel = grpc.aio.secure_channel(self.server, self.credentials)
             self.stub = CloudRouteStub(self.channel)
+
+            # WAIT FOR TLS handshake + TCP ready
+            await self.channel.channel_ready()
+
+            logger.info("gRPC channel ready.")
             self.connected.set()
+
         except Exception as e:
-            logger.error("Failed to connect to gRPC server: %s", e)
-            raise e
+            logger.error(f"Failed to connect to gRPC server: {e}")
+            raise
 
 class CloudClient(GRPCClient):
-    def __init__(self, server, cert_path):
+    def __init__(self, server, cert_path, loop=None):
         super().__init__(server, cert_path)
+        self.loop = loop if loop else asyncio.get_running_loop()
         self.send_queue = asyncio.Queue(maxsize=30)
         self.frame_buffer = {}
         self.processed_frames = {}
@@ -58,12 +78,14 @@ class CloudClient(GRPCClient):
             yield req
     
     async def start(self):
-        while True:
+        self.running = True
+        while self.running:
             try:
                 logger.info("Starting gRPC client")
-                self.connect()
+                await self.connect()
                 logger.info("Starting FULLY ASYNC CloudRouteStream...")
-                responses = self.stub.CloudRouteStream(self._request_stream())
+                request_stream = self._request_stream()
+                responses = self.stub.CloudRouteStream(request_stream)
                 async for response in responses:
                     if response.frame_id not in self.frame_buffer:
                         logger.warning("Missing frame %s", response.frame_id)
@@ -107,4 +129,9 @@ class CloudClient(GRPCClient):
             except asyncio.QueueEmpty:
                 break
 
-
+    async def stop(self):
+        self.running = False
+        if self.channel:
+            await self.channel.close()
+        self.connected.clear()
+        logger.info("CloudClient stopped")
