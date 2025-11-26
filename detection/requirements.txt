@@ -2,5 +2,8 @@ ultralytics
 opencv-python
 #rfdetr
 supervision
-pybreaker
+circuitbreaker
+grpcio-tools
 pika
+requests
+httpx

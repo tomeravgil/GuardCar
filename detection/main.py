@@ -10,6 +10,10 @@ async def main():
     # Start RabbitMQ in background thread
     manager.connection_manager.run_in_background()
 
+    # Wait for RabbitMQ connection to be established
+    while not manager.connection_manager.is_ready():
+        await asyncio.sleep(0.1)
+
     # Start event listener (async)
     asyncio.create_task(manager.event_listener())
 

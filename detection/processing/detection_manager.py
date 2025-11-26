@@ -2,6 +2,7 @@ import os
 from asyncio import Queue
 import socket
 from detection.model.yolo.yolo_detection import YOLODetectionService
+from detection.processing.config_manager import ConfigManager
 from detection.processing.processor_provider import ProcessorProvider
 import logging
 import requests
@@ -9,6 +10,7 @@ import cv2
 import numpy as np
 import struct
 import httpx
+import json
 import threading
 from detection.processing.processors.local_processor import LocalProcessor
 from detection.processing.processors.rpc_processor import RPCProcessor
@@ -30,17 +32,25 @@ class DetectionManager:
         model_path = model if model is not None else "yolo11n.pt"
         self.yolo_detection_service = None
         self.tracking_service = TrackingDetectionService()
+        self.config = ConfigManager()
+        if self.config.get("CLASS_K"):
+            raw_k = self.config.get("CLASS_K", {})
+
+            # Convert keys back to int
+            class_k = {int(k): float(v) for k, v in raw_k.items()}
+
+            self.tracking_service.set_class_k(class_k)
         self._create_local_provider(model_path)
-        self.video_ip = os.getenv("VIDEO_IP", "192.168.52.103")
-        self.video_port = os.getenv("VIDEO_PORT", 8443)
-        self.api_port = os.getenv("API_PORT", "8080")
-        self.amqp_url = os.getenv("AMQP_URL", "amqp://guest:guest@localhost:5672/")
+        self.video_ip = self.config.get("VIDEO_IP", "192.168.52.103")
+        self.video_port = self.config.get("VIDEO_PORT", 8443)
+        self.api_port = self.config.get("API_PORT", "8080")
+        self.amqp_url = self.config.get("AMQP_URL", "amqp://guest:guest@localhost:5672/")
         self.connection_manager = ConnectionManager(self.amqp_url)
         self.event_queue = Queue()
-        self.suspicion_score = 75
-        suspicion_frame_producer_queue_name = os.getenv("SUSPICION_FRAME_QUEUE_NAME", "SUSPICION_FRAME_QUEUE")
-        recording_status_producer_queue_name = os.getenv("RECORDING_STATUS_QUEUE_NAME", "RECORDING_STATUS_QUEUE")
-        response_queue_name = os.getenv("RESPONSE_QUEUE_NAME", "RESPONSE_QUEUE")
+        self.suspicion_score = self.config.get("SUSPICION_SCORE", 75)
+        suspicion_frame_producer_queue_name = self.config.get("SUSPICION_FRAME_QUEUE_NAME", "SUSPICION_FRAME_QUEUE")
+        recording_status_producer_queue_name = self.config.get("RECORDING_STATUS_QUEUE_NAME", "RECORDING_STATUS_QUEUE")
+        response_queue_name = self.config.get("RESPONSE_QUEUE_NAME", "RESPONSE_QUEUE")
         self.response_producer = Producer(response_queue_name)
         self.recording_producer = Producer(recording_status_producer_queue_name)
         self.suspicion_producer = Producer(suspicion_frame_producer_queue_name)
@@ -127,9 +137,25 @@ class DetectionManager:
 
             if isinstance(msg, SuspicionConfigMessage):
                 self.suspicion_score = msg.threshold
-                logger.info(f"Updated suspicion threshold to: {self.suspicion_score}")
-                if isinstance(msg.class_weights,dict) and len(msg.class_weights.keys()) != 0:
-                    self.tracking_service.set_class_k(msg.class_weights)
+
+                # Save permanently
+                self.config.set("suspicion_score", msg.threshold)
+
+                if isinstance(msg.class_weights, dict) and msg.class_weights:
+                    class_k = {int(k): float(v) for k, v in msg.class_weights.items()}
+                    self.tracking_service.set_class_k(class_k)
+                    self.config.set("class_k", msg.class_weights)
+
+                logger.info(f"Updated suspicion config: score={self.suspicion_score}")
+
+                self.response_producer.publish(
+                    ResponseMessage(
+                        success=True,
+                        message=f"Updated suspicion config!",
+                        related_to="suspicion"
+                    ),
+                    expire_time="1000"
+                )
                 return
 
             logger.warning(
@@ -140,7 +166,8 @@ class DetectionManager:
                     success=False,
                     message=f"Unsupported message type: {type(msg).__name__}",
                     related_to="general"
-                )
+                ),
+                expire_time="1000"
             )
         except Exception as e:
             logger.error(f"Error handling event: {e}", exc_info=True)
@@ -149,7 +176,8 @@ class DetectionManager:
                     success=False,
                     message=str(e),
                     related_to="general"
-                )
+                ),
+                expire_time="1000"
             )
 
     def _create_local_provider(self,model_path):
@@ -177,8 +205,8 @@ class DetectionManager:
         logger.info(f"Downloaded YOLO model to {model_path}")
 
     def _register_queues(self):
-        cloud_provider_queue_name = os.getenv("CLOUD_PROVIDER_CONFIG_QUEUE_NAME","CLOUD_PROVIDER_CONFIG_QUEUE")
-        suspicion_config_queue_name = os.getenv("SUSPICION_CONFIG_QUEUE_NAME", "SUSPICION_CONFIG_QUEUE")
+        cloud_provider_queue_name = self.config.get("CLOUD_PROVIDER_CONFIG_QUEUE_NAME","CLOUD_PROVIDER_CONFIG_QUEUE")
+        suspicion_config_queue_name = self.config.get("SUSPICION_CONFIG_QUEUE_NAME", "SUSPICION_CONFIG_QUEUE")
         self.connection_manager.add_consumer(
             Consumer(cloud_provider_queue_name,self.event_queue, CloudProviderConfigMessage)
         )
@@ -221,6 +249,15 @@ class DetectionManager:
 
             # Find next provider and switch FIRST
             await self._delete_provider(msg.provider_name)
+            self.config.remove_provider(msg.provider_name)
+            self.response_producer.publish(
+                ResponseMessage(
+                    success=True,
+                    message=f"Deleted provider {msg.provider_name}",
+                    related_to="cloud"
+                ),
+                expire_time="1000"
+            )
             return
         cloud = CloudClient(server=msg.connection_ip, cert_path=msg.server_certification,
                             loop=asyncio.get_running_loop())
@@ -233,9 +270,24 @@ class DetectionManager:
                                          tracking_service=self.tracking_service)
             self.processor_provider.register(name="cloud", provider=rpc_processor)
             self.processor_provider.change_main_provider(name="cloud")
+            self.config.add_provider(msg.provider_name, {
+                "type": "cloud",
+                "connection_ip": msg.connection_ip,
+                "server_certification": msg.server_certification,
+                "active": True
+            })
+            self.response_producer.publish(
+                ResponseMessage(
+                    success=True,
+                    message=f"Added provider {msg.provider_name}",
+                    related_to="cloud"
+                ),
+                expire_time="1000"
+            )
         except asyncio.TimeoutError:
             logger.warning("Cloud gRPC timeout — continuing without cloud.")
             await self._delete_provider(msg.provider_name)
+            self.config.remove_provider(msg.provider_name)
 
 
     async def _delete_provider(self,provider_name):
@@ -245,4 +297,3 @@ class DetectionManager:
 
         # THEN remove (and stop) the old one
         await self.processor_provider.remove_provider(name=provider_name)
-

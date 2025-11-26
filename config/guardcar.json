@@ -1,0 +1,31 @@
+{
+  "VIDEO_IP": "192.168.52.103",
+  "VIDEO_PORT": 8443,
+  "API_PORT": "8080",
+
+  "AMQP_URL": "amqp://guest:guest@rabbitmq:5672/",
+
+  "SUSPICION_SCORE": 75,
+  "CLASS_K": {
+      "0": 1.6,
+      "1": 0.6,
+      "2": 1.0,
+      "3": 1.0,
+      "5": 1.4,
+      "7": 1.4
+  },
+
+  "CLOUD_PROVIDER_CONFIG_QUEUE_NAME": "CLOUD_PROVIDER_CONFIG_QUEUE",
+  "SUSPICION_CONFIG_QUEUE_NAME": "SUSPICION_CONFIG_QUEUE",
+  "SUSPICION_FRAME_QUEUE_NAME": "SUSPICION_FRAME_QUEUE",
+  "RECORDING_STATUS_QUEUE_NAME": "RECORDING_STATUS_QUEUE",
+  "RESPONSE_QUEUE_NAME": "RESPONSE_QUEUE",
+
+  "providers": {
+    "local": {
+      "type": "local",
+      "description": "Local YOLO inference on-device",
+      "active": true
+    }
+  }
+}

@@ -1,13 +1,8 @@
-from abc import abstractmethod
-
 import pika
 import logging
 import json
-from rabbitMQ.dtos.dto import SuspicionFrameMessage, CloudProviderConfigMessage
 import threading
 log = logging.getLogger(__name__)
-import asyncio
-from functools import partial
 
 
 class Producer:
@@ -130,9 +125,24 @@ class ConnectionManager:
         log.warning("Connection closed: %s", reason)
 
     def run(self):
-        self.connection = self.connect()
-        self.connection.ioloop.start()
+        while True:
+            try:
+                self.connection = self.connect()
+                self.connection.ioloop.start()
+            except Exception as e:
+                log.error(f"RabbitMQ connection failed: {e}")
+                log.info("Retrying in 5 seconds...")
+                import time
+                time.sleep(5)
 
     def run_in_background(self):
         thread = threading.Thread(target=self.run, daemon=True)
         thread.start()
+
+    def is_ready(self):
+        if self.connection is None or not self.connection.is_open:
+            return False
+        for producer in self.producers:
+            if producer.channel is None:
+                return False
+        return True

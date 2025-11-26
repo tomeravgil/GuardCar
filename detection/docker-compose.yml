@@ -14,11 +14,12 @@ services:
 
   detection-manager:
     build:
-      context: ../../
-      dockerfile: detection/processing/Dockerfile
+      context: ..
+      dockerfile: detection/Dockerfile
     container_name: guardcar-detection-manager
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
     environment:
       AMQP_URL: amqp://guest:guest@rabbitmq:5672/
       CLOUD_PROVIDER_CONFIG_QUEUE_NAME: CLOUD_PROVIDER_CONFIG_QUEUE

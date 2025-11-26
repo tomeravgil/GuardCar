@@ -20,7 +20,7 @@ class CloudProviderConfigMessage:
 @dataclass
 class SuspicionConfigMessage:
     threshold: int
-    class_weights: Dict[int, float]
+    class_weights: Dict[str, float]
 
 @dataclass
 class ResponseMessage:
