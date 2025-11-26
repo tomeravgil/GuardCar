@@ -1,50 +1,25 @@
 # core/services/rabbitmq_consumer.py
 import asyncio
-import json
-import aio_pika
-from typing import Callable, Awaitable
+from dataclasses import asdict
+from backend.app.core.services.sse.server_side_events import ServerSideEventsService
 
-OnMessage = Callable[[dict], Awaitable[None]]
-
-class RabbitMQConsumer:
+class RabbitMQEventHandler:
     def __init__(
         self,
-        amqp_url: str,
-        queue_name: str,
-        on_message: OnMessage,
-        *,
-        prefetch: int = 32,
-        shutdown_event: asyncio.Event | None = None,
-    ) -> None:
-        self.amqp_url = amqp_url
-        self.queue_name = queue_name
-        self.on_message = on_message
-        self.prefetch = prefetch
+        event_queue: asyncio.Queue,
+        server_side_event_service: ServerSideEventsService,
+        shutdown_event: asyncio.Event | None = None
+        ) -> None:
+        self.event_queue = event_queue
         self.shutdown_event = shutdown_event or asyncio.Event()
+        self.sse_service = server_side_event_service
 
     async def run(self) -> None:
-        backoff = 1
         while not self.shutdown_event.is_set():
-            try:
-                conn = await aio_pika.connect_robust(self.amqp_url)
-                async with conn:
-                    ch = await conn.channel()
-                    await ch.set_qos(prefetch_count=self.prefetch)
-                    q = await ch.declare_queue(self.queue_name, durable=True)
+            msg = await self.event_queue.get()
+            self._handle_event(msg)
+            self.event_queue.task_done()
 
-                    async with q.iterator() as qiter:
-                        async for msg in qiter:
-                            if self.shutdown_event.is_set():
-                                break
-                            async with msg.process(requeue=False):
-                                try:
-                                    payload = json.loads(msg.body.decode("utf-8"))
-                                except Exception:
-                                    payload = {"raw": msg.body.decode("utf-8", "ignore")}
-                                await self.on_message(payload)
-                backoff = 1  # reset after a clean exit
-            except asyncio.CancelledError:
-                break
-            except Exception:
-                await asyncio.sleep(min(backoff, 10))
-                backoff = min(backoff * 2, 10)
+    def _handle_event(self, msg):
+        self.sse_service.send_event("event",asdict(msg))
+
