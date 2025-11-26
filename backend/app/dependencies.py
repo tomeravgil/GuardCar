@@ -63,6 +63,7 @@ async def init_dependencies(shutdown_event: asyncio.Event):
         prefetch=32,
         shutdown_event=shutdown_event,
     )
+    
     task = asyncio.create_task(_consumer.run())
     _bg_tasks.append(task)
 
