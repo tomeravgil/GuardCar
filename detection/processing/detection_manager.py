@@ -259,10 +259,10 @@ class DetectionManager:
                 expire_time="1000"
             )
             return
-        cloud = CloudClient(server=msg.connection_ip, cert_path=msg.server_certification,
-                            loop=asyncio.get_running_loop())
-        asyncio.create_task(cloud.start())
         try:
+            cloud = CloudClient(server=msg.connection_ip, cert_path=msg.server_certification,
+                                loop=asyncio.get_running_loop())
+            asyncio.create_task(cloud.start())
             await asyncio.wait_for(cloud.connected.wait(), timeout=5)
             logger.info("Cloud gRPC connected.")
             rpc_processor = RPCProcessor(local_detection_service=self.yolo_detection_service,

@@ -12,7 +12,6 @@ class CloudRouteService(CloudRouteServicer):
     def CloudRoute(self, request: DetectionRequest, context):
         return self.__convert_internal_dr_to_rpc_dr(self.cloud_model.detect(request.frame), request.frame_id)
 
-
     async def CloudRouteStream(self, request_iterator, context):
         print("SERVER: Stream started")
 
