@@ -1,4 +1,3 @@
-import base64
 import os
 from asyncio import Queue
 import socket
@@ -17,7 +16,7 @@ from detection.tracking.tracking_service import TrackingDetectionService
 from gRPC.grpc_client import CloudClient
 from rabbitMQ.consumer.connection_manager import ConnectionManager, Consumer, Producer
 from rabbitMQ.dtos.dto import CloudProviderConfigMessage, SuspicionConfigMessage, RecordingStatusMessage, \
-    SuspicionFrameMessage
+    SuspicionFrameMessage, ResponseMessage
 import asyncio
 logging.basicConfig(
     level=logging.INFO,
@@ -26,7 +25,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class DetectionManager:
-
     def __init__(self, model):
         self.processor_provider = ProcessorProvider()
         model_path = model if model is not None else "yolo11n.pt"
@@ -42,6 +40,8 @@ class DetectionManager:
         self.suspicion_score = 75
         suspicion_frame_producer_queue_name = os.getenv("SUSPICION_FRAME_QUEUE_NAME", "SUSPICION_FRAME_QUEUE")
         recording_status_producer_queue_name = os.getenv("RECORDING_STATUS_QUEUE_NAME", "RECORDING_STATUS_QUEUE")
+        response_queue_name = os.getenv("RESPONSE_QUEUE_NAME", "RESPONSE_QUEUE")
+        self.response_producer = Producer(response_queue_name)
         self.recording_producer = Producer(recording_status_producer_queue_name)
         self.suspicion_producer = Producer(suspicion_frame_producer_queue_name)
         self._register_queues()
@@ -90,11 +90,12 @@ class DetectionManager:
                 else:
                     score, tracked = result
 
-                encoded_frame = base64.b64encode(jpg_bytes).decode()
                 self.suspicion_producer.publish(
-                    SuspicionFrameMessage(
+                    message_obj=SuspicionFrameMessage(
                         suspicion_score=score
                     )
+                    ,
+                    expire_time="100" # expire after 100ms
                 )
                 if score >= self.suspicion_score and not self.recording:
                     async with httpx.AsyncClient() as client:
@@ -103,7 +104,7 @@ class DetectionManager:
                 elif score < self.suspicion_score and self.recording:
                     async with httpx.AsyncClient() as client:
                         await client.post(f"http://{self.video_ip}:{self.api_port}/stop")
-                    self.recording_producer.publish(RecordingStatusMessage(True))
+                    self.recording_producer.publish(RecordingStatusMessage(False))
                 frame_id += 1
                 await asyncio.sleep(0)
         except Exception as e:
@@ -118,41 +119,38 @@ class DetectionManager:
             await self._handle_event(msg)
             self.event_queue.task_done()
 
-
     async def _handle_event(self, msg):
-        logger.info("handling event...")
-        logger.info(f"Received event: {msg}")
-        if isinstance(msg, CloudProviderConfigMessage):
-            if msg.delete:
-                logger.info("Delete requested.")
-                if msg.provider_name.lower() == "local":
-                    return
-                # Find next provider and switch FIRST
-                next_provider = self.processor_provider.find_next_cloud_provider(msg.provider_name)
-                logger.info(f"Switching to next provider: {next_provider}")
-                self.processor_provider.change_main_provider(name=next_provider)
-                
-                # THEN remove (and stop) the old one
-                await self.processor_provider.remove_provider(name=msg.provider_name)
+        try:
+            if isinstance(msg, CloudProviderConfigMessage):
+                await self._handle_cloud_message(msg)
                 return
-            cloud = CloudClient(server=msg.connection_ip,cert_path=msg.server_certification, loop=asyncio.get_running_loop())
-            asyncio.create_task(cloud.start())
-            try:
-                await asyncio.wait_for(cloud.connected.wait(), timeout=5)
-                logger.info("Cloud gRPC connected.")
-                rpc_processor = RPCProcessor(local_detection_service=self.yolo_detection_service,
-                             cloud_client=cloud,
-                             tracking_service=self.tracking_service)
-                self.processor_provider.register(name="cloud", provider=rpc_processor)
-                self.processor_provider.change_main_provider(name="cloud")
-            except asyncio.TimeoutError:
-                logger.warning("Cloud gRPC timeout — continuing without cloud.")
 
-        elif isinstance(msg, SuspicionConfigMessage):
-            logger.info(f"Updating suspicion threshold: {msg.threshold}")
-            self.suspicion_score = msg.threshold
-            if msg.class_weights is not None:
-                self.tracking_service.set_class_k(msg.class_weights)
+            if isinstance(msg, SuspicionConfigMessage):
+                self.suspicion_score = msg.threshold
+                logger.info(f"Updated suspicion threshold to: {self.suspicion_score}")
+                if isinstance(msg.class_weights,dict) and len(msg.class_weights.keys()) != 0:
+                    self.tracking_service.set_class_k(msg.class_weights)
+                return
+
+            logger.warning(
+                f"Unknown message type received: {type(msg)} → {msg!r}"
+            )
+            self.response_producer.publish(
+                ResponseMessage(
+                    success=False,
+                    message=f"Unsupported message type: {type(msg).__name__}",
+                    related_to="general"
+                )
+            )
+        except Exception as e:
+            logger.error(f"Error handling event: {e}", exc_info=True)
+            self.response_producer.publish(
+                ResponseMessage(
+                    success=False,
+                    message=str(e),
+                    related_to="general"
+                )
+            )
 
     def _create_local_provider(self,model_path):
         """Ensures YOLO model exists, downloads if missing."""
@@ -193,6 +191,9 @@ class DetectionManager:
         self.connection_manager.add_producer(
             self.recording_producer
         )
+        self.connection_manager.add_producer(
+            self.response_producer
+        )
 
 
     def _receive_all(self, sock, length):
@@ -212,4 +213,36 @@ class DetectionManager:
         thread = threading.Thread(target=wrapper, daemon=True)
         thread.start()
 
+    async def _handle_cloud_message(self, msg: CloudProviderConfigMessage):
+        if msg.delete:
+            logger.info("Delete requested.")
+            if msg.provider_name.lower() == "local":
+                return
+
+            # Find next provider and switch FIRST
+            await self._delete_provider(msg.provider_name)
+            return
+        cloud = CloudClient(server=msg.connection_ip, cert_path=msg.server_certification,
+                            loop=asyncio.get_running_loop())
+        asyncio.create_task(cloud.start())
+        try:
+            await asyncio.wait_for(cloud.connected.wait(), timeout=5)
+            logger.info("Cloud gRPC connected.")
+            rpc_processor = RPCProcessor(local_detection_service=self.yolo_detection_service,
+                                         cloud_client=cloud,
+                                         tracking_service=self.tracking_service)
+            self.processor_provider.register(name="cloud", provider=rpc_processor)
+            self.processor_provider.change_main_provider(name="cloud")
+        except asyncio.TimeoutError:
+            logger.warning("Cloud gRPC timeout — continuing without cloud.")
+            await self._delete_provider(msg.provider_name)
+
+
+    async def _delete_provider(self,provider_name):
+        next_provider = self.processor_provider.find_next_cloud_provider(provider_name)
+        logger.info(f"Switching to next provider: {next_provider}")
+        self.processor_provider.change_main_provider(name=next_provider)
+
+        # THEN remove (and stop) the old one
+        await self.processor_provider.remove_provider(name=provider_name)
 

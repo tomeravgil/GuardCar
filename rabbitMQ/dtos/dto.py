@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict,Literal
+
 
 @dataclass
 class SuspicionFrameMessage:
@@ -20,3 +21,9 @@ class CloudProviderConfigMessage:
 class SuspicionConfigMessage:
     threshold: int
     class_weights: Dict[int, float]
+
+@dataclass
+class ResponseMessage:
+    success: bool
+    message: str
+    related_to: Literal["cloud", "suspicion", "general"]

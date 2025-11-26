@@ -18,18 +18,23 @@ class Producer:
     def get_queue(self):
         return self.queue_name
 
-    def publish(self, message_obj):
+    def publish(self, message_obj, expire_time=None):
         if self.channel is None:
             log.error("Producer channel not ready yet!")
             return
 
+        properties = pika.BasicProperties()
+        if expire_time is not None:
+            properties = pika.BasicProperties(
+                expiration=expire_time,  # Message expires after 60 seconds (60000 milliseconds)
+            )
         payload = json.dumps(message_obj.__dict__).encode()
         self.channel.basic_publish(
             exchange="",
             routing_key=self.queue_name,
-            body=payload
+            body=payload,
+            properties=properties
         )
-        # log.info(f"[Producer] Sent → {self.queue_name}: {payload}")
 
 
 class Consumer:
@@ -44,13 +49,17 @@ class Consumer:
         return self.queue_name
 
     def on_message(self, ch, method, props, body):
-        data = json.loads(body.decode())
-        msg = self.data_class(**data)
+        try:
+            data = json.loads(body.decode())
+            msg = self.data_class(**data)
 
-        # Push into async queue safely
-        self.asyncio_loop.call_soon_threadsafe(
-            self.event_queue.put_nowait, msg
-        )
+            # Push into async queue safely
+            self.asyncio_loop.call_soon_threadsafe(
+                self.event_queue.put_nowait, msg
+            )
+        except json.decoder.JSONDecodeError:
+            log.error("Failed to decode JSON, ignoring")
+
         # Acknowledge
         ch.basic_ack(method.delivery_tag)
 
