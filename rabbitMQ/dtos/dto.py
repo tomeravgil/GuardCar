@@ -11,6 +11,7 @@ class RecordingStatusMessage:
 
 @dataclass
 class CloudProviderConfigMessage:
+    provider_name: str
     connection_ip: str
     server_certification: str
     delete: bool

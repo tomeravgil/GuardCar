@@ -92,7 +92,7 @@ class RPCProcessor(Processor):
 
         # Schedule get_processed_frame on the main loop
         future_get = asyncio.run_coroutine_threadsafe(
-            self.cloud_client.get_processed_frame(frame_id=frame_id, timeout=10),
+            self.cloud_client.get_processed_frame(frame_id=frame_id, timeout=1),
             self.cloud_client.loop
         )
         return await asyncio.wrap_future(future_get)
@@ -107,3 +107,6 @@ class RPCProcessor(Processor):
             await asyncio.wait_for(asyncio.wrap_future(future), timeout=1.0)
         except asyncio.TimeoutError:
             pass
+
+    async def stop(self):
+        await self.cloud_client.stop()

@@ -125,8 +125,15 @@ class DetectionManager:
         if isinstance(msg, CloudProviderConfigMessage):
             if msg.delete:
                 logger.info("Delete requested.")
-                self.processor_provider.remove_provider(name="cloud")
-                self.processor_provider.change_main_provider(name="local")
+                if msg.provider_name.lower() == "local":
+                    return
+                # Find next provider and switch FIRST
+                next_provider = self.processor_provider.find_next_cloud_provider(msg.provider_name)
+                logger.info(f"Switching to next provider: {next_provider}")
+                self.processor_provider.change_main_provider(name=next_provider)
+                
+                # THEN remove (and stop) the old one
+                await self.processor_provider.remove_provider(name=msg.provider_name)
                 return
             cloud = CloudClient(server=msg.connection_ip,cert_path=msg.server_certification, loop=asyncio.get_running_loop())
             asyncio.create_task(cloud.start())

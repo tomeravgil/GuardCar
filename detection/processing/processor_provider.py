@@ -1,5 +1,7 @@
 from detection.processing.processors.processor import Processor
+import logging
 
+logger = logging.getLogger(__name__)
 
 class ProcessorProvider:
 
@@ -19,8 +21,19 @@ class ProcessorProvider:
         except KeyError:
             return False
 
+    def find_next_cloud_provider(self, name):
+        for provider in self.providers.keys():
+            if provider != "local" and provider != name:
+                return provider
+        return "local"
+
     def get_selected_provider(self) -> Processor:
         return self.selected_provider
 
-    def remove_provider(self,name):
-        del self.providers[name]
+    async def remove_provider(self,name):
+        try:
+            provider = self.providers.pop(name)
+            if hasattr(provider, "stop"):
+                await provider.stop()
+        except KeyError:
+            logger.error(f"No provider named {name}")

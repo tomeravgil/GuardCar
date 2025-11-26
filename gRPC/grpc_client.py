@@ -78,7 +78,8 @@ class CloudClient(GRPCClient):
             yield req
     
     async def start(self):
-        while True:
+        self.running = True
+        while self.running:
             try:
                 logger.info("Starting gRPC client")
                 await self.connect()
@@ -127,3 +128,10 @@ class CloudClient(GRPCClient):
                 self.send_queue.task_done()
             except asyncio.QueueEmpty:
                 break
+
+    async def stop(self):
+        self.running = False
+        if self.channel:
+            await self.channel.close()
+        self.connected.clear()
+        logger.info("CloudClient stopped")
