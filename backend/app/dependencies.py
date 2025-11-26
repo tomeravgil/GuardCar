@@ -57,7 +57,7 @@ async def init_dependencies(shutdown_event: asyncio.Event):
 
     # 3) Start RabbitMQ consumer
     _consumer = RabbitMQConsumer(
-        amqp_url=_env("AMQP_URL", "amqp://guest:guest@rabbitmq:5672/"),
+        amqp_url=_env("AMQP_URL", "amqp://guest:guest@localhost:5672/"),
         queue_name=_env("AMQP_QUEUE", "guardcar.tasks"),
         on_message=_on_queue_message,
         prefetch=32,
