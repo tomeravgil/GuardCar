@@ -1,4 +1,4 @@
-from ..services.sse.i_server_side_events_service import IServerSideEventsService
+from backend.app.core.services.sse.i_server_side_events_service import IServerSideEventsService
 from fastapi.responses import StreamingResponse
 
 class ServerSideEventsUseCase:

@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+minio
+pika
+starlette
+pydantic
+asyncio
+marshmallow
+python-multipart

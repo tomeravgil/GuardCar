@@ -10,20 +10,21 @@ from .core.services.rabbitmqconsumer.rabbitmq_consumer import RabbitMQEventHandl
 from rabbitMQ.consumer.connection_manager import ConnectionManager, Consumer, Producer
 from rabbitMQ.dtos.dto import SuspicionFrameMessage, RecordingStatusMessage, ResponseMessage
 from asyncio import Queue
+
+
 ui_thresholds = UIThresholds(suspicion_score_threshold=70)
 _suspicion_service = SuspicionService()
-_sse_service = None  # will be initialized later
+
+# will be initialized later
+_sse_service = None
 
 # Keep refs so GC doesn't cancel
 _bg_tasks: list[asyncio.Task] = []
 _connection_manager: RabbitMQEventHandler | None = None
 
-
 def _env(name: str, default: str) -> str:
     v = os.getenv(name)
     return v if v else default
-
-
 
 def init_dependencies(shutdown_event: asyncio.Event):
     global _sse_service, _connection_manager
