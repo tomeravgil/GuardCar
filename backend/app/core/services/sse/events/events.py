@@ -1,10 +1,10 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from dataclasses import dataclass
 import json
 
 
 @dataclass
-class SSEEvent:
+class SSEEvent(ABC):
     """
     Represents a Server-Sent Event (SSE) with an event type and associated data.
     Extend this class to create specific event types as needed.
