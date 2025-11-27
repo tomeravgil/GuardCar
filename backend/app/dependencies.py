@@ -1,6 +1,7 @@
 import os
 import asyncio
 from .api.schemas.thresholds import UIThresholds
+from .core.use_cases.cloud_config import CloudConfigurationConfigurationUseCase
 from .core.use_cases.evaluate_suspicion import EvaluateSuspicionUseCase
 from .core.services.suspicion.i_suspicion_service import ISuspicionService, SuspicionService
 from .core.services.sse.i_server_side_events_service import IServerSideEventsService
@@ -11,6 +12,7 @@ from rabbitMQ.consumer.connection_manager import ConnectionManager, Consumer, Pr
 from rabbitMQ.dtos.dto import SuspicionFrameMessage, RecordingStatusMessage, ResponseMessage
 from asyncio import Queue
 
+from .core.use_cases.suspicion_config import SuspicionConfigurationUseCase
 
 ui_thresholds = UIThresholds(suspicion_score_threshold=70)
 _suspicion_service = SuspicionService()
@@ -21,13 +23,13 @@ _sse_service = None
 # Keep refs so GC doesn't cancel
 _bg_tasks: list[asyncio.Task] = []
 _connection_manager: RabbitMQEventHandler | None = None
-
+_producers = []
 def _env(name: str, default: str) -> str:
     v = os.getenv(name)
     return v if v else default
 
 def init_dependencies(shutdown_event: asyncio.Event):
-    global _sse_service, _connection_manager
+    global _sse_service, _connection_manager, _producers
 
     loop = asyncio.get_running_loop()  # now safe: called from startup event
 
@@ -50,11 +52,11 @@ def init_dependencies(shutdown_event: asyncio.Event):
 
     cloud_provider_config_queue = Producer("CLOUD_PROVIDER_CONFIG_QUEUE")
     suspicion_config_queue = Producer("SUSPICION_CONFIG_QUEUE")
-    producers = [cloud_provider_config_queue, suspicion_config_queue]
+    _producers = [cloud_provider_config_queue, suspicion_config_queue]
 
     for consumer in consumers:
         _connection_manager.add_consumer(consumer)
-    for producer in producers:
+    for producer in _producers:
         _connection_manager.add_producer(producer)
 
     # 4) Start RabbitMQ connection in its own thread
@@ -73,6 +75,8 @@ def get_suspicion_service() -> ISuspicionService:
 def get_sse_service() -> IServerSideEventsService:
     return _sse_service
 
+def get_producers() -> list[Producer]:
+    return _producers
 
 def get_suspicion_use_case():
     suspicion_service = get_suspicion_service()
@@ -83,6 +87,14 @@ def get_suspicion_use_case():
         threshold=ui_thresholds.suspicion_score_threshold,
     )
 
+def get_suspicion_config_use_case():
+    suspicion_config_producer = get_producers()[1]
+    return SuspicionConfigurationUseCase(suspicion_config_producer=suspicion_config_producer)
+
+def get_cloud_provider_config_use_case():
+    cloud_provider_config_producer = get_producers()[0]
+    return CloudConfigurationConfigurationUseCase(
+        cloud_config_producer=cloud_provider_config_producer)
 
 def get_sse_use_case():
     sse_service = get_sse_service()

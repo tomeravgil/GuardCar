@@ -1,19 +1,21 @@
 import asyncio
 from backend.app.dependencies import init_dependencies
-from backend.app.core.services.sse.server_side_events import ServerSideEventsService
 from backend.app.core.services.minio.minio_service import init_minio_bucket
 from fastapi import FastAPI
 from datetime import datetime
 from backend.app.api.routers import suspicion
 from backend.app.api.routers import sse
-from backend.app.api.schemas.thresholds import UIThresholds
 from backend.app.api.routers import videos
+from backend.app.api.routers import cloud_config
+from backend.app.api.routers import suspicion_config
 
 app = FastAPI(title="GuardCar API")
 
 app.include_router(suspicion.router)
 app.include_router(sse.router)
 app.include_router(videos.router)
+app.include_router(cloud_config.router)
+app.include_router(suspicion_config.router)
                    
 shutdown_event = asyncio.Event()
 @app.on_event("startup")  
