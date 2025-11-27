@@ -1,22 +1,34 @@
+# core/services/sse/server_side_events.py
+
 import asyncio
-from core.services.sse.events.event_factory import SSEEventFactory
-from core.services.sse.i_server_side_events_service import IServerSideEventsService
+from .events.event_factory import SSEEventFactory
+from .i_server_side_events_service import IServerSideEventsService
 
 
 class ServerSideEventsService(IServerSideEventsService):
-
     def __init__(self, shutdown_event: asyncio.Event) -> None:
         self.shutdown_event = shutdown_event
-        self.sse_queue = asyncio.Queue()
+        # Consider a bounded queue to apply backpressure if producers get ahead
+        self.sse_queue: asyncio.Queue = asyncio.Queue(maxsize=1000)
 
     def send_event(self, event: str, data: dict) -> None:
-        # Implementation for sending a server-sent event
-        event = SSEEventFactory.create_event(event, data)
-        self.sse_queue.put_nowait(event)
+        evt = SSEEventFactory.create_event(event, data)
+        # put_nowait is fine here—if you want safety, catch QueueFull and drop/aggregate
+        self.sse_queue.put_nowait(evt)
 
     async def stream_events(self):
+        """
+        Async generator for SSE. Yields lines formatted by your event's `to_sse_format()`.
+        - Properly wraps coroutines in Tasks for asyncio.wait
+        - Cancels the losing task each loop to avoid leaks
+        - Exits quickly on shutdown
+        """
         try:
+            # Optional: emit a quick "hello" to confirm stream is alive
+            self.send_event("hello", {"msg": "connected"})
+
             while not self.shutdown_event.is_set():
+                
                 # Create tasks for both the queue get and shutdown event
                 queue_task = asyncio.create_task(self.sse_queue.get())
                 shutdown_task = asyncio.create_task(self.shutdown_event.wait())
@@ -46,10 +58,11 @@ class ServerSideEventsService(IServerSideEventsService):
                     yield event.to_sse_format()
                     self.sse_queue.task_done()
 
-                await asyncio.sleep(0.1)
-
+                # Small pause is optional; can be removed
+                # await asyncio.sleep(0)  # cooperative yield
         except asyncio.CancelledError:
-            # This happens if the client disconnects or Uvicorn cancels the generator
-            print("SSE stream cancelled (client disconnected or server shutting down).")
+            # Client disconnected or server shutdown
+            print("SSE stream cancelled.")
         finally:
             print("SSE stream exited cleanly.")
+
