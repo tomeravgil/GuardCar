@@ -1,4 +1,7 @@
 import asyncio
+
+from fastapi.middleware.cors import CORSMiddleware
+
 from backend.app.dependencies import init_dependencies
 from backend.app.core.services.minio.minio_service import init_minio_bucket
 from fastapi import FastAPI
@@ -11,6 +14,13 @@ from backend.app.api.routers import suspicion_config
 
 app = FastAPI(title="GuardCar API")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],  # <-- ALLOW OPTIONS HERE
+    allow_headers=["*"],
+)
 app.include_router(suspicion.router)
 app.include_router(sse.router)
 app.include_router(videos.router)
