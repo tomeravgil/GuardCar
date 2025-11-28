@@ -1,3 +1,4 @@
+import base64
 import os
 from asyncio import Queue
 import socket
@@ -18,7 +19,7 @@ from detection.tracking.tracking_service import TrackingDetectionService
 from gRPC.grpc_client import CloudClient
 from rabbitMQ.consumer.connection_manager import ConnectionManager, Consumer, Producer
 from rabbitMQ.dtos.dto import CloudProviderConfigMessage, SuspicionConfigMessage, RecordingStatusMessage, \
-    SuspicionFrameMessage, ResponseMessage
+    SuspicionFrameMessage, ResponseMessage, VideoFrameMessage
 import asyncio
 logging.basicConfig(
     level=logging.INFO,
@@ -51,6 +52,8 @@ class DetectionManager:
         suspicion_frame_producer_queue_name = self.config.get("SUSPICION_FRAME_QUEUE_NAME", "SUSPICION_FRAME_QUEUE")
         recording_status_producer_queue_name = self.config.get("RECORDING_STATUS_QUEUE_NAME", "RECORDING_STATUS_QUEUE")
         response_queue_name = self.config.get("RESPONSE_QUEUE_NAME", "RESPONSE_QUEUE")
+        frame_producer_queue_name = self.config.get("FRAME_QUEUE_NAME", "FRAME_QUEUE")
+        self.frame_producer = Producer(frame_producer_queue_name)
         self.response_producer = Producer(response_queue_name)
         self.recording_producer = Producer(recording_status_producer_queue_name)
         self.suspicion_producer = Producer(suspicion_frame_producer_queue_name)
@@ -84,8 +87,9 @@ class DetectionManager:
                 if jpg_bytes is None:
                     logger.warning("Lost frame.")
                     break
+                jpeg_b64 = base64.b64encode(jpg_bytes).decode()
 
-                # 3. Decode JPEG → OpenCV
+                self.frame_producer.publish(message_obj=VideoFrameMessage(jpeg_bytes=jpeg_b64),expire_time="100")
                 img = cv2.imdecode(np.frombuffer(jpg_bytes, np.uint8), cv2.IMREAD_COLOR)
                 if img is None:
                     continue
@@ -103,18 +107,19 @@ class DetectionManager:
                 self.suspicion_producer.publish(
                     message_obj=SuspicionFrameMessage(
                         suspicion_score=score
-                    )
-                    ,
+                    ),
                     expire_time="100" # expire after 100ms
                 )
                 if score >= self.suspicion_score and not self.recording:
                     async with httpx.AsyncClient() as client:
                         await client.post(f"http://{self.video_ip}:{self.api_port}/start")
                     self.recording_producer.publish(RecordingStatusMessage(True))
+                    self.recording = True
                 elif score < self.suspicion_score and self.recording:
                     async with httpx.AsyncClient() as client:
                         await client.post(f"http://{self.video_ip}:{self.api_port}/stop")
                     self.recording_producer.publish(RecordingStatusMessage(False))
+                    self.recording = False
                 frame_id += 1
                 await asyncio.sleep(0)
         except Exception as e:
@@ -222,6 +227,9 @@ class DetectionManager:
         self.connection_manager.add_producer(
             self.response_producer
         )
+        self.connection_manager.add_producer(
+            self.frame_producer
+        )
 
 
     def _receive_all(self, sock, length):
@@ -288,6 +296,14 @@ class DetectionManager:
             logger.warning("Cloud gRPC timeout — continuing without cloud.")
             await self._delete_provider(msg.provider_name)
             self.config.remove_provider(msg.provider_name)
+            self.response_producer.publish(
+                ResponseMessage(
+                    success=False,
+                    message=f"Failed to connect to provider {msg.provider_name}: Timeout",
+                    related_to="cloud"
+                ),
+                expire_time="1000"
+            )
 
 
     async def _delete_provider(self,provider_name):

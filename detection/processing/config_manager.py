@@ -2,7 +2,7 @@ import json
 import os
 import shutil
 
-CONFIG_PATH = "app/config/guardcar.json"
+CONFIG_PATH = "config/guardcar.json"
 
 class ConfigManager:
     def __init__(self, path=CONFIG_PATH):

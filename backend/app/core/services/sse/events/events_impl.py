@@ -45,46 +45,55 @@ class SuspicionDetected(SSEEventImpl):
         return isinstance(score, (int, float))
 
 
-class ClearEvent(SSEEventImpl):
-    """Event indicating state has returned to normal."""
+class RecordingEvent(SSEEventImpl):
+    """SSE event indicating whether the Pi is recording."""
 
     def _validate_specific(self) -> bool:
-        # Dictionary[str, str]
-        return self._has_str_keys_and_values_of_type(str)
-
-
-class WarningEvent(SSEEventImpl):
-    """Non-fatal warning event."""
-
-    def _validate_specific(self) -> bool:
-        # Dictionary[str, str]
-        return self._has_str_keys_and_values_of_type(str)
-
-
-class InfoEvent(SSEEventImpl):
-    """Informational event."""
-
-    def _validate_specific(self) -> bool:
-        # Dictionary[str, str]
-        return self._has_str_keys_and_values_of_type(str)
-
-
-class ErrorEvent(SSEEventImpl):
-    """Error event for downstream consumers."""
-
-    def _validate_specific(self) -> bool:
-        # Dictionary[str, str]
-        if not self._has_str_keys_and_values_of_type(str):
+        # Must contain: {"recording": bool}
+        if not self._has_str_keys_and_values_of_type(bool):
             return False
 
-        # Still enforce required keys
-        if "message" not in self.data:
-            return False
-        if "error_code" not in self.data:
+        return "recording" in self.data
+
+
+class SuccessResponseEvent(SSEEventImpl):
+    """SSE event emitted when a ResponseMessage indicates success."""
+
+    def _validate_specific(self) -> bool:
+        # required keys
+        if "success" not in self.data or "message" not in self.data or "related_to" not in self.data:
             return False
 
-        return True
+        # ensure correct types
+        if not isinstance(self.data["success"], bool):
+            return False
+        if not isinstance(self.data["message"], str):
+            return False
+        if self.data["related_to"] not in ("cloud", "suspicion", "general"):
+            return False
 
+        # final check: this event only when success=True
+        return self.data["success"] is True
+
+
+class FailureResponseEvent(SSEEventImpl):
+    """SSE event emitted when a ResponseMessage indicates failure."""
+
+    def _validate_specific(self) -> bool:
+        # required keys
+        if "success" not in self.data or "message" not in self.data or "related_to" not in self.data:
+            return False
+
+        # ensure correct types
+        if not isinstance(self.data["success"], bool):
+            return False
+        if not isinstance(self.data["message"], str):
+            return False
+        if self.data["related_to"] not in ("cloud", "suspicion", "general"):
+            return False
+
+        # final check: this event only when success=False
+        return self.data["success"] is False
 
 class MultiTestEvent(SSEEventImpl):
     """Event used for multi-test / dev scenarios."""

@@ -1,13 +1,15 @@
-from ..events.events_impl import SSEEventImpl
+from marshmallow import ValidationError
+
+from ..events.events_impl import *
 
 
 class SSEEventFactory:
     EVENT_MAP = {
-        "suspicion_detected": SuspicionDetected,
-        "clear": ClearEvent,
-        "warning": WarningEvent,
-        "info": InfoEvent,
-        "error": ErrorEvent,
+        "suspicion": SuspicionDetected,
+        "success": SuccessResponseEvent,
+        "error": FailureResponseEvent,
+        "failure": FailureResponseEvent,
+        "recording" : RecordingEvent,
         "multi_test": MultiTestEvent,
         "test_event": TestEvent
     }
@@ -18,4 +20,8 @@ class SSEEventFactory:
         if not event_class:
             raise ValueError(f"Unknown event type: {event_type}")
         event_instance = event_class(event=event_type, data=data)
+        try:
+            event_instance.validate_event()
+        except ValidationError as e:
+            raise e
         return event_instance
