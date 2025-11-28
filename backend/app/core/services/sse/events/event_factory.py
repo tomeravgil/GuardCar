@@ -8,6 +8,7 @@ class SSEEventFactory:
         "suspicion": SuspicionDetected,
         "success": SuccessResponseEvent,
         "error": FailureResponseEvent,
+        "failure": FailureResponseEvent,
         "recording" : RecordingEvent,
         "multi_test": MultiTestEvent,
         "test_event": TestEvent

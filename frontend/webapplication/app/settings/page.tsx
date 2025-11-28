@@ -54,7 +54,7 @@ export default function SettingsPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/providers");
+        const res = await fetch("http://127.0.0.1:8000/api/providers");
         if (res.ok) {
           const data = await res.json();
           setProviders(data);
@@ -63,6 +63,50 @@ export default function SettingsPage() {
         console.warn("Could not load providers.");
       }
     })();
+  }, []);
+
+  // ----------------------------
+  // SSE LISTENER
+  // ----------------------------
+  useEffect(() => {
+    const sse = new EventSource("http://127.0.0.1:8000/api/sse");
+
+    sse.onopen = () => console.log("[SSE] Connection opened.");
+    sse.onerror = (e) => console.log("[SSE] Connection error:", e);
+
+    sse.addEventListener("success", (e: any) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.related_to === "cloud") {
+          toast.success(data.message);
+          // Refresh providers list
+          fetch("http://127.0.0.1:8000/api/providers")
+            .then((r) => r.json())
+            .then(setProviders);
+        } else if (data.related_to === "suspicion") {
+          toast.success(data.message);
+        }
+      } catch (err) {
+        console.error("SSE Parse Error", err);
+      }
+    });
+
+    sse.addEventListener("failure", (e: any) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.related_to === "cloud") {
+          toast.error(data.message);
+        } else if (data.related_to === "suspicion") {
+          toast.error(data.message);
+        }
+      } catch (err) {
+        console.error("SSE Parse Error", err);
+      }
+    });
+
+    return () => {
+      sse.close();
+    };
   }, []);
 
   // ----------------------------
@@ -78,7 +122,7 @@ export default function SettingsPage() {
   // ----------------------------
   const createProvider = async () => {
     try {
-      const res = await fetch("/api/register_provider", {
+      const res = await fetch("http://127.0.0.1:8000/api/register_provider", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(provider),
@@ -86,11 +130,7 @@ export default function SettingsPage() {
 
       if (!res.ok) throw new Error();
 
-      toast.success("Cloud provider registered!");
-
-      // refresh provider list
-      const updated = await fetch("/api/providers").then((r) => r.json());
-      setProviders(updated);
+      toast.info("Request sent. Waiting for confirmation...");
 
       // clear form
       setProvider({
@@ -99,7 +139,7 @@ export default function SettingsPage() {
         server_certification: "",
       });
     } catch {
-      toast.error("Failed to register provider.");
+      toast.error("Failed to send registration request.");
     }
   };
 
@@ -108,7 +148,7 @@ export default function SettingsPage() {
   // ----------------------------
   const deleteProvider = async (provider_name: string) => {
     try {
-      const res = await fetch("/api/delete_provider", {
+      const res = await fetch("http://127.0.0.1:8000/api/delete_provider", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ provider_name }),
@@ -116,13 +156,9 @@ export default function SettingsPage() {
 
       if (!res.ok) throw new Error();
 
-      toast.success("Provider removed.");
-
-      // refresh
-      const updated = await fetch("/api/providers").then((r) => r.json());
-      setProviders(updated);
+      toast.info("Request sent. Waiting for confirmation...");
     } catch {
-      toast.error("Failed to delete provider.");
+      toast.error("Failed to send delete request.");
     }
   };
 
@@ -131,7 +167,7 @@ export default function SettingsPage() {
   // ----------------------------
   const updateSuspicionLevel = async () => {
     try {
-      const res = await fetch("/api/suspicion_config", {
+      const res = await fetch("http://127.0.0.1:8000/api/suspicion_config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -141,9 +177,9 @@ export default function SettingsPage() {
 
       if (!res.ok) throw new Error();
 
-      toast.success("Suspicion level updated.");
+      toast.info("Request sent. Waiting for confirmation...");
     } catch {
-      toast.error("Failed to update suspicion level.");
+      toast.error("Failed to send update request.");
     }
   };
 

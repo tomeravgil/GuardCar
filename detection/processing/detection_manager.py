@@ -296,6 +296,14 @@ class DetectionManager:
             logger.warning("Cloud gRPC timeout — continuing without cloud.")
             await self._delete_provider(msg.provider_name)
             self.config.remove_provider(msg.provider_name)
+            self.response_producer.publish(
+                ResponseMessage(
+                    success=False,
+                    message=f"Failed to connect to provider {msg.provider_name}: Timeout",
+                    related_to="cloud"
+                ),
+                expire_time="1000"
+            )
 
 
     async def _delete_provider(self,provider_name):
