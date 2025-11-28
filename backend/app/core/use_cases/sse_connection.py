@@ -8,4 +8,11 @@ class ServerSideEventsUseCase:
 
     def execute(self):
         # Example event data
-        return StreamingResponse(self.sse_service.stream_events(), media_type="text/event-stream")
+        headers = {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
+        return StreamingResponse(self.sse_service.stream_events(), media_type="text/event-stream", headers=headers)

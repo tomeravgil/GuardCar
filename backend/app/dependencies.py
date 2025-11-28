@@ -9,10 +9,11 @@ from .core.use_cases.sse_connection import ServerSideEventsUseCase
 from .core.services.sse.server_side_events import ServerSideEventsService
 from .core.services.rabbitmqconsumer.rabbitmq_consumer import RabbitMQEventHandler
 from rabbitMQ.consumer.connection_manager import ConnectionManager, Consumer, Producer
-from rabbitMQ.dtos.dto import SuspicionFrameMessage, RecordingStatusMessage, ResponseMessage
+from rabbitMQ.dtos.dto import SuspicionFrameMessage, RecordingStatusMessage, ResponseMessage, VideoFrameMessage
 from asyncio import Queue
 
 from .core.use_cases.suspicion_config import SuspicionConfigurationUseCase
+from .core.use_cases.video_stream import VideoStreamUseCase
 
 ui_thresholds = UIThresholds(suspicion_score_threshold=70)
 _suspicion_service = SuspicionService()
@@ -24,17 +25,21 @@ _sse_service = None
 _bg_tasks: list[asyncio.Task] = []
 _connection_manager: RabbitMQEventHandler | None = None
 _producers = []
+_video_stream_use_case: VideoStreamUseCase | None = None
+
 def _env(name: str, default: str) -> str:
     v = os.getenv(name)
     return v if v else default
 
 def init_dependencies(shutdown_event: asyncio.Event):
-    global _sse_service, _connection_manager, _producers
+    global _sse_service, _connection_manager, _producers, _video_stream_use_case
 
     loop = asyncio.get_running_loop()  # now safe: called from startup event
 
     # 1) SSE service
     _sse_service = ServerSideEventsService(shutdown_event)
+
+    _video_stream_use_case = VideoStreamUseCase()
 
     # 2) Shared event queue
     event_queue: Queue = Queue()
@@ -48,7 +53,8 @@ def init_dependencies(shutdown_event: asyncio.Event):
     suspicion_consumer = Consumer("SUSPICION_FRAME_QUEUE", event_queue, SuspicionFrameMessage)
     recording_status_consumer = Consumer("RECORDING_STATUS_QUEUE", event_queue, RecordingStatusMessage)
     response_consumer = Consumer("RESPONSE_QUEUE", event_queue, ResponseMessage)
-    consumers = [suspicion_consumer, recording_status_consumer, response_consumer]
+    frame_consumer = Consumer("FRAME_QUEUE",event_queue, VideoFrameMessage)
+    consumers = [suspicion_consumer, recording_status_consumer, response_consumer, frame_consumer]
 
     cloud_provider_config_queue = Producer("CLOUD_PROVIDER_CONFIG_QUEUE")
     suspicion_config_queue = Producer("SUSPICION_CONFIG_QUEUE")
@@ -63,7 +69,7 @@ def init_dependencies(shutdown_event: asyncio.Event):
     _connection_manager.run_in_background()
 
     # 5) Start async RabbitMQ → SSE bridge in the event loop
-    handler = RabbitMQEventHandler(event_queue, _sse_service, shutdown_event)
+    handler = RabbitMQEventHandler(event_queue, _sse_service, _video_stream_use_case, shutdown_event)
     task = asyncio.create_task(handler.run())
     _bg_tasks.append(task)
 
@@ -99,3 +105,6 @@ def get_cloud_provider_config_use_case():
 def get_sse_use_case():
     sse_service = get_sse_service()
     return ServerSideEventsUseCase(sse_service=sse_service)
+
+def get_video_stream_use_case() -> VideoStreamUseCase:
+    return _video_stream_use_case

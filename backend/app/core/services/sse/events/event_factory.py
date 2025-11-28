@@ -1,6 +1,5 @@
 from marshmallow import ValidationError
 
-from rabbitMQ.dtos.dto import RecordingStatusMessage
 from ..events.events_impl import *
 
 
@@ -9,7 +8,7 @@ class SSEEventFactory:
         "suspicion": SuspicionDetected,
         "success": SuccessResponseEvent,
         "error": FailureResponseEvent,
-        "recording" : RecordingStatusMessage,
+        "recording" : RecordingEvent,
         "multi_test": MultiTestEvent,
         "test_event": TestEvent
     }

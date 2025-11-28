@@ -1,131 +1,285 @@
 "use client";
-import { useState } from "react";
+
+import { useEffect, useState } from "react";
 import Sidebar from "../components/sidebar";
+
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from "../components/ui/card";
+
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Button } from "../components/ui/button";
+import { Separator } from "../components/ui/separator";
+import { toast } from "sonner";
+
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "../components/ui/table";
 
 
 export default function SettingsPage() {
+  // ----------------------------
+  // FORM STATE (Create Provider)
+  // ----------------------------
+  const [provider, setProvider] = useState({
+    provider_name: "",
+    connection_ip: "",
+    server_certification: "",
+  });
 
-	// temp until api can fetch current settings
-	const [formData, setFormData] = useState({
-		user: "admin",
-		password: "1234",
-		email: "blank@gmail.com",
-		phone: "555-555-5555",
-		server: "192.168.1.190",
-		scores: { person: "", dog: "", car: "" },
-	});
+  // ----------------------------
+  // SUSPICION CONFIG STATE
+  // ----------------------------
+  const [suspicionLevel, setSuspicionLevel] = useState("");
 
+  // ----------------------------
+  // EXISTING PROVIDERS TABLE
+  // ----------------------------
+  const [providers, setProviders] = useState<any[]>([]);
 
-	// update form data
-	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const { name, value } = e.target;
-		
-		if (name.startsWith("scores.")) {
-			const key = name.split(".")[1];
-			setFormData((prev) => ({
-				...prev,
-				scores: { ...prev.scores, [key]: value },
-			}));
-		}
-		else {
-			setFormData((prev) => ({ ...prev, [name]: value }));
-		}
-	};
+  // ----------------------------
+  // Load providers on mount
+  // ----------------------------
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/providers");
+        if (res.ok) {
+          const data = await res.json();
+          setProviders(data);
+        }
+      } catch {
+        console.warn("Could not load providers.");
+      }
+    })();
+  }, []);
 
+  // ----------------------------
+  // INPUT HANDLERS
+  // ----------------------------
+  const handleProviderChange = (e: any) => {
+    const { name, value } = e.target;
+    setProvider((prev) => ({ ...prev, [name]: value }));
+  };
 
-	// To Connect to backend API (To Do)
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-		
-		try {
-			// if (!request.ok){
-			// 	throw new Error("Request failed");
-			// }
-			// else {
-			// 	alert("Settings saved!");
-			// }
-		
-		} catch {
-			alert("Error saving settings.");
-		}
-	};
+  // ----------------------------
+  // REGISTER PROVIDER
+  // ----------------------------
+  const createProvider = async () => {
+    try {
+      const res = await fetch("/api/register_provider", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(provider),
+      });
 
+      if (!res.ok) throw new Error();
 
-	
-	return (
-		<div className="flex min-h-screen bg-gray-50">
-			<Sidebar />
-			<main className="flex-1 p-10">
-				<h1 className="text-3xl font-bold text-gray-800 mb-8">Settings</h1>
+      toast.success("Cloud provider registered!");
 
-				<form
-					onSubmit={handleSubmit}
-					className="bg-white p-8 rounded-2xl shadow-md space-y-6 w-full"
-				>
-					{[
-						{ label: "User", name: "user", type: "text" },
-						{ label: "Password", name: "password", type: "password" },
-						{ label: "Email", name: "email", type: "email" },
-						{ label: "Phone", name: "phone", type: "tel" },
-						{ label: "Server Address", name: "server", type: "text" },
-					].map((input) => (
-						<div key={input.name}>
-							<label className="block text-sm font-semibold mb-1">
-								{input.label}
-							</label>
-							<input
-								type={input.type}
-								name={input.name}
-								value={(formData as any)[input.name]}
-								onChange={handleChange}
-								placeholder={`Enter ${input.label.toLowerCase()}`}
-								className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]"
-							/>
-						</div>
-					))}
+      // refresh provider list
+      const updated = await fetch("/api/providers").then((r) => r.json());
+      setProviders(updated);
 
-					<div className="mt-8">
-						<h2 className="text-xl font-semibold mb-4 text-gray-700">
-							Suspicion Scores
-						</h2>
-						<div className="pl-4 border-l-2 border-gray-200 space-y-4">
-							{[
-								{ label: "Person", name: "scores.person" },
-								{ label: "Bike", name: "scores.bike" },
-								{ label: "Car", name: "scores.car" },
-								{ label: "Motorcycle", name: "scores.motorcyle" },
-								{ label: "Bus", name: "scores.bus" },
-								{ label: "Truck", name: "scores.truck" },
-							].map((input) => (
-								<div key={input.name}>
-									<label className="block text-sm font-semibold mb-1">
-										{input.label}
-									</label>
-									<input
-										type="number"
-										name={input.name}
-										value={
-										(formData.scores as any)[input.name.split(".")[1]] || ""
-										}
-										onChange={handleChange}
-										placeholder={`Enter ${input.label.toLowerCase()}`}
-										className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]"
-									/>
-								</div>
-							))}
-						</div>
-					</div>
+      // clear form
+      setProvider({
+        provider_name: "",
+        connection_ip: "",
+        server_certification: "",
+      });
+    } catch {
+      toast.error("Failed to register provider.");
+    }
+  };
 
-					<div className="flex justify-end">
-						<button
-							type="submit"
-							className="bg-[#FF5A5F] text-white px-8 py-3 rounded-full font-semibold hover:bg-[#ff4449] transition"
-						>
-							Save
-						</button>
-					</div>
-				</form>
-			</main>
-		</div>
-	);
+  // ----------------------------
+  // DELETE PROVIDER
+  // ----------------------------
+  const deleteProvider = async (provider_name: string) => {
+    try {
+      const res = await fetch("/api/delete_provider", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider_name }),
+      });
+
+      if (!res.ok) throw new Error();
+
+      toast.success("Provider removed.");
+
+      // refresh
+      const updated = await fetch("/api/providers").then((r) => r.json());
+      setProviders(updated);
+    } catch {
+      toast.error("Failed to delete provider.");
+    }
+  };
+
+  // ----------------------------
+  // UPDATE SUSPICION LEVEL
+  // ----------------------------
+  const updateSuspicionLevel = async () => {
+    try {
+      const res = await fetch("/api/suspicion_config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          suspicion_level: Number(suspicionLevel),
+        }),
+      });
+
+      if (!res.ok) throw new Error();
+
+      toast.success("Suspicion level updated.");
+    } catch {
+      toast.error("Failed to update suspicion level.");
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar />
+
+      <main className="flex-1 p-10">
+        <h1 className="text-3xl font-bold mb-8 text-gray-800">Settings</h1>
+
+        <div className="space-y-10">
+          {/* ---------------------------- */}
+          {/* CLOUD PROVIDERS SECTION      */}
+          {/* ---------------------------- */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Cloud Providers</CardTitle>
+              <CardDescription>
+                Add or remove cloud inference providers.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col space-y-2">
+                <Label>Provider Name</Label>
+                <Input
+                  name="provider_name"
+                  value={provider.provider_name}
+                  onChange={handleProviderChange}
+                />
+              </div>
+
+              <div className="flex flex-col space-y-2">
+                <Label>Connection IP</Label>
+                <Input
+                  name="connection_ip"
+                  value={provider.connection_ip}
+                  onChange={handleProviderChange}
+                />
+              </div>
+
+              <div className="flex flex-col space-y-2 md:col-span-2">
+                <Label>Server Certification</Label>
+                <Input
+                  name="server_certification"
+                  value={provider.server_certification}
+                  onChange={handleProviderChange}
+                />
+              </div>
+            </CardContent>
+
+            <CardFooter>
+              <Button onClick={createProvider}>Register Provider</Button>
+            </CardFooter>
+          </Card>
+
+          {/* PROVIDERS TABLE */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Registered Providers</CardTitle>
+              <CardDescription>Manage existing providers.</CardDescription>
+            </CardHeader>
+
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Provider Name</TableHead>
+                    <TableHead>Connection IP</TableHead>
+                    <TableHead>Server Cert</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+
+                <TableBody>
+                  {providers.map((p) => (
+                    <TableRow key={p.provider_name}>
+                      <TableCell>{p.provider_name}</TableCell>
+                      <TableCell>{p.connection_ip}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">
+                        {p.server_certification}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => deleteProvider(p.provider_name)}
+                        >
+                          Delete
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+
+                  {providers.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-gray-500">
+                        No providers registered.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <Separator />
+
+          {/* ---------------------------- */}
+          {/* SUSPICION CONFIG SECTION     */}
+          {/* ---------------------------- */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Suspicion Configuration</CardTitle>
+              <CardDescription>
+                Set the global suspicion threshold level.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="flex flex-col space-y-4">
+              <Label>Suspicion Level</Label>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                value={suspicionLevel}
+                onChange={(e) => setSuspicionLevel(e.target.value)}
+              />
+            </CardContent>
+
+            <CardFooter>
+              <Button onClick={updateSuspicionLevel}>Save Level</Button>
+            </CardFooter>
+          </Card>
+        </div>
+      </main>
+    </div>
+  );
 }
