@@ -2,7 +2,7 @@ from minio import Minio
 from minio.error import S3Error
 from .config import settings
 from .logging_config import log
-from core.entities.video import VideoMetadata
+from backend.app.core.entities.video import VideoMetadata
 from datetime import datetime, timedelta
 import uuid
 import io

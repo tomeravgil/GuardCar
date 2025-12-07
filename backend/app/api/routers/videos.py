@@ -3,8 +3,8 @@ from fastapi.responses import JSONResponse
 from fastapi import Form
 from typing import List
 import io
-from core.entities.video import VideoMetadata, VideoDetailsResponse, UploadSuccessResponse
-from core.services.minio.minio_service import (
+from backend.app.core.entities.video import VideoMetadata, VideoDetailsResponse, UploadSuccessResponse
+from backend.app.core.services.minio.minio_service import (
     upload_video_to_minio,
     list_videos_from_minio,
     get_video_metadata,

@@ -27,3 +27,7 @@ class ResponseMessage:
     success: bool
     message: str
     related_to: Literal["cloud", "suspicion", "general"]
+
+@dataclass
+class VideoFrameMessage:
+    jpeg_bytes: str

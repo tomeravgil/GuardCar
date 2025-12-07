@@ -9,6 +9,8 @@ import os
 import requests
 
 from detection.model.yolo.yolo_detection import YOLODetectionService
+from detection.processing.processors.local_processor import LocalProcessor
+from detection.processing.processors.processor import Processor
 from detection.tracking.tracking_service import TrackingDetectionService
 from detection.processing.processors.rpc_processor import RPCProcessor
 from detection.model.detection_service import DetectionService
@@ -56,8 +58,8 @@ def ensure_yolo_model_exists(model_path: str):
 # Main Combined Class
 # --------------------------
 class StreamRPCClient:
-    def __init__(self, rpc_processor: RPCProcessor):
-        self.rpc = rpc_processor
+    def __init__(self, processor: Processor):
+        self.rpc = processor
 
     async def connect_and_process(self, ip, port):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -95,16 +97,17 @@ class StreamRPCClient:
                     continue
 
                 # 5. Run RPCProcessor (local+cloud+tracking)
-                score, tracked = await self.rpc.process(resized_frame=img, frame_id=frame_id)
+                score, tracked = self.rpc.process(resized_frame=img, frame_id=frame_id)
 
                 # 6. Draw detections
                 for i in range(len(tracked)):
                     x1, y1, x2, y2 = tracked.xyxy[i].astype(int)
+
                     cls_id = int(tracked.class_id[i])
                     track_id = int(tracked.tracker_id[i])
 
                     cls_name = self.rpc.get_classification(cls_id)
-
+                    logger.info(f"tracked {cls_name}")
                     cv2.rectangle(img, (x1, y1), (x2, y2), (0,255,0), 2)
                     cv2.putText(img, f"{cls_name} #{track_id}",
                                 (x1, y1 - 8),
@@ -149,29 +152,13 @@ async def main():
     ensure_yolo_model_exists(model_path)
     yolo = YOLODetectionService(model_path)
 
-    # Cloud producer
-    cert_path = "gRPC/server.crt"
-    server = "localhost:50051"
-    try:
-        cloud = CloudClient(server, cert_path)
-    except Exception as e:
-        logger.error(f"Cloud init failed: {e}")
-        cloud = None
-
     tracking = TrackingDetectionService()
-    rpc = RPCProcessor(yolo, cloud, tracking)
 
-    # Start gRPC backend
-    if cloud:
-        asyncio.create_task(cloud.start())
-        try:
-            await asyncio.wait_for(cloud.connected.wait(), timeout=5)
-            logger.info("Cloud gRPC connected.")
-        except asyncio.TimeoutError:
-            logger.warning("Cloud gRPC timeout — continuing without cloud.")
+    localProcessor = LocalProcessor(detection_service=yolo, tracking_service=tracking)
+
 
     # Run streaming + RPC pipeline
-    client = StreamRPCClient(rpc)
+    client = StreamRPCClient(localProcessor)
     await client.connect_and_process(ip, port)
 
 
