@@ -34,6 +34,7 @@ class RabbitMQEventHandler:
             elif isinstance(msg,RecordingStatusMessage):
                 self.sse_service.send_event("recording",asdict(msg))
             elif isinstance(msg,ResponseMessage):
+                logger.info(f"Received response message: {msg}")
                 if msg.success:
                     self.sse_service.send_event("success",asdict(msg))
                 else:

@@ -71,6 +71,7 @@ class TrackingDetectionService:
             k_factor = self.class_k.get(cls_id, None)
             if k_factor is None:
                 scores.append(0.0)
+                continue
 
             area_score = self.sigmoid(area_ratio, midpoint=25, k=0.12 * k_factor, max_value=60)
             time_score = self.sigmoid(duration, midpoint=4,   k=0.08 * k_factor, max_value=40)
