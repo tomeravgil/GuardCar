@@ -4,7 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.dependencies import init_dependencies
 from backend.app.core.services.minio.minio_service import init_minio_bucket
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import datetime
 from backend.app.api.routers import suspicion, video_stream
 from backend.app.api.routers import sse
@@ -12,7 +13,11 @@ from backend.app.api.routers import videos
 from backend.app.api.routers import cloud_config
 from backend.app.api.routers import suspicion_config
 
+
 app = FastAPI(title="GuardCar API")
+
+# creating the OAuth2 Scheme object 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/token")
 
 app.add_middleware(
     CORSMiddleware,
@@ -45,6 +50,21 @@ def root():
 @app.get("/healthz")
 def health():
     return {"ok": True}
+
+# creating a POST Endpoint for login at /api/token 
+@app.post("/api/token")
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()): # extracting the username and password of the request 
+    # test information for auth 
+    if form_data.username != "test" or form_data.password != "password":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            # header when authentification fails 
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # if theres a correct login, return token for login, currently temp 
+    return {"access_token": "Access Token Return Success", "token_type": "Bearer"}
 
 @app.on_event("shutdown")
 async def on_shutdown():
