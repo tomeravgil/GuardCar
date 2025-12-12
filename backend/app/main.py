@@ -95,7 +95,7 @@ def get_user_from_token(token: str):
             "role": "admin",
         }
 
-    except jwt.ExpiredSignature:
+    except jwt.ExpiredSignatureError:
         return None 
     except jwt.PyJWTError:
         return None 
