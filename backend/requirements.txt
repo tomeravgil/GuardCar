@@ -7,3 +7,5 @@ pydantic
 asyncio
 marshmallow
 python-multipart
+PyJWT
+python-dotenv

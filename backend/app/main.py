@@ -13,11 +13,25 @@ from backend.app.api.routers import videos
 from backend.app.api.routers import cloud_config
 from backend.app.api.routers import suspicion_config
 
+import os 
+from datetime import datetime, timedelta 
+
+import jwt 
+from dotenv import load_dotenv
+
+# loading the environmental variables and secrets 
+load_dotenv()
+
+# get the secrets and keys for JWT
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-fallback-change-me")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
 app = FastAPI(title="GuardCar API")
 
 # creating the OAuth2 Scheme object 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/token")
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,6 +49,7 @@ async def startup_event():
     init_minio_bucket()
     init_dependencies(shutdown_event)
 
+
 @app.get("/")
 def root():
     return {
@@ -42,9 +57,11 @@ def root():
         "server_time": datetime.now().astimezone().isoformat(sep=" "),
     }
 
+
 @app.get("/healthz")
 def health():
     return {"ok": True}
+
 
 # creating a POST Endpoint for login at /api/token 
 @app.post("/api/token")
@@ -58,15 +75,30 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # if theres a correct login, return token for login, currently temp 
-    return {"access_token": "Access-Token-Success", "token_type": "Bearer"}
+    # if theres a correct login, return the JWT with username as subject 
+    access_token_expiration = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(data={"sub": form_data.username},expires_in=access_token_expiration)
+    return {"access_token": access_token, "token_type": "Bearer"}
 
 
 # get current user from a token 
 def get_user_from_token(token: str):
-    if token == "Access-Token-Success":
-        return {"username": "test", "role": "admin"}
-    return None
+    try: 
+        decodedUser = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = decodedUser.get("sub")
+        if username is None:
+            return None
+
+        # return fake user object, connect database here 
+        return {
+            "username": username,
+            "role": "admin",
+        }
+
+    except jwt.ExpiredSignature:
+        return None 
+    except jwt.PyJWTError:
+        return None 
 
 
 # Extracts the bearer token from the authorization, 
@@ -81,7 +113,8 @@ async def get_current_user(token: str = Security(oauth2_scheme)):
             headers={"WWW-Authenticate": "Bearer"},
         )
     # eventually return the real user information, but currently returning dummy user 
-    return {"user-name": "test"}
+    return user
+
 
 # Check if the current user has a valid token then return the dictionary
 # corrersponding to the current user 
@@ -90,10 +123,27 @@ async def read_current_user(current_user: dict = Depends(get_current_user)):
     return current_user
 
 
-
 @app.on_event("shutdown")
 async def on_shutdown():
     shutdown_event.set()
+
+
+def create_access_token(data: dict, expires_in: timedelta | None = None):
+    # copy the data to encode it 
+    data_copy = data.copy() 
+
+    # update the expiration date if the secret exists 
+    if expires_in is not None:
+        expire = datetime.utcnow() + expires_in
+    else: 
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    # update it in the copy 
+    data_copy.update({"exp": expire})
+
+    encoded_JWT = jwt.encode(data_copy, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_JWT
+
 
 # declare this after functions to be able to use get_current_user as a dependi
 app.include_router(suspicion.router)
