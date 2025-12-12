@@ -61,18 +61,35 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     # if theres a correct login, return token for login, currently temp 
     return {"access_token": "Access-Token-Success", "token_type": "Bearer"}
 
+
+# get current user from a token 
+def get_user_from_token(token: str):
+    if token == "Access-Token-Success":
+        return {"username": "test", "role": "admin"}
+    return None
+
+
 # Extracts the bearer token from the authorization, 
 # then validates that the token matches the one at our login endpoint
 async def get_current_user(token: str = Security(oauth2_scheme)):
+    user = get_user_from_token(token)
     # Validates the bearer token and then validates the current fake token
-    if token != "Access-Token-Success":
+    if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=401,
             detail="Invalid authentication credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
     # eventually return the real user information, but currently returning dummy user 
     return {"user-name": "test"}
+
+# Check if the current user has a valid token then return the dictionary
+# corrersponding to the current user 
+@app.get("/api/me")
+async def read_current_user(current_user: dict = Depends(get_current_user)):
+    return current_user
+
+
 
 @app.on_event("shutdown")
 async def on_shutdown():
